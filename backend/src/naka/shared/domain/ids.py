@@ -36,3 +36,7 @@ class BusinessId(EntityId):
 
 class VerificationId(EntityId):
     pass
+
+
+class EnquiryId(EntityId):
+    pass
