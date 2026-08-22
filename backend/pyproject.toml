@@ -16,6 +16,7 @@ dependencies = [
     "arq>=0.26",
     "anthropic>=0.40",
     "pgvector>=0.3.6",
+    "tzdata>=2024.2",
 ]
 
 [dependency-groups]
@@ -26,6 +27,7 @@ dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
     "pytest-cov>=6.0",
+    "import-linter>=2.1",
 ]
 
 [build-system]
@@ -61,37 +63,20 @@ select = [
     "TID251", # flake8-tidy-imports: banned-api (layer/context boundaries)
 ]
 
-# Layer- and context-boundary enforcement.
-#
-# Two concerns share this one rule, both scoped to "is this file inside a
-# domain/ package":
-#   1. Domain must stay pure Python — no framework or I/O SDK imports.
-#   2. Domain must not import another bounded context's domain objects —
-#      contexts talk through domain events or application services instead
-#      (naka.shared.domain is the one exception: it's the common base every
-#      context is allowed to depend on).
-#
-# Within a context's own domain package, reference sibling modules with
-# relative imports (`from .entities import Business`) rather than the
-# absolute path — that's normal style here, and it's also what keeps a
-# context from tripping its own ban below.
-#
-# NOTE: per-file-ignores below lift ALL of TID251 (both concerns) for
-# application/infrastructure/api/tests, since ruff can't ignore individual
-# banned-api entries per file. Cross-context isolation in those layers is
-# enforced by convention and review, not by this rule — only domain/ gets
-# hard enforcement.
+# Domain purity: no framework or I/O SDK imports inside any domain/ package.
+# Cross-context isolation (a context's domain must never import another
+# context's domain objects) is a separate concern, enforced by import-linter
+# below instead of here — banned-api can't distinguish "naka.catalog.domain
+# imported from outside catalog" from "naka.catalog.domain.entities importing
+# its own sibling naka.catalog.domain.value_objects", since ruff resolves
+# relative imports to their absolute form before matching. import-linter's
+# `independence` contract type has no such blind spot.
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "fastapi" = { msg = "Domain is pure Python. Route FastAPI through the API layer." }
 "sqlalchemy" = { msg = "Domain is pure Python. Access persistence through a repository port." }
 "httpx" = { msg = "Domain is pure Python. Call external services through a Port." }
 "redis" = { msg = "Domain is pure Python. Access Redis through a Port." }
 "anthropic" = { msg = "Domain is pure Python. Call AI providers through AIClientPort." }
-"naka.catalog.domain" = { msg = "Cross-context domain import. Use a domain event or an application service instead." }
-"naka.verification.domain" = { msg = "Cross-context domain import. Use a domain event or an application service instead." }
-"naka.enquiry.domain" = { msg = "Cross-context domain import. Use a domain event or an application service instead." }
-"naka.engagement.domain" = { msg = "Cross-context domain import. Use a domain event or an application service instead." }
-"naka.identity.domain" = { msg = "Cross-context domain import. Use a domain event or an application service instead." }
 
 [tool.ruff.lint.per-file-ignores]
 "**/application/**" = ["TID251"]
@@ -99,6 +84,95 @@ select = [
 "**/api/**" = ["TID251"]
 "tests/**" = ["TID251"]
 "src/naka/main.py" = ["TID251"]
+
+# ---------------------------------------------------------------------------
+# import-linter — bounded-context and layer boundaries
+# ---------------------------------------------------------------------------
+[tool.importlinter]
+root_packages = ["naka"]
+
+[[tool.importlinter.contracts]]
+name = "Bounded contexts: domain layers never import each other"
+type = "independence"
+modules = [
+    "naka.catalog.domain",
+    "naka.verification.domain",
+    "naka.enquiry.domain",
+    "naka.engagement.domain",
+    "naka.identity.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "shared never depends on a bounded context"
+type = "forbidden"
+source_modules = ["naka.shared"]
+forbidden_modules = [
+    "naka.catalog",
+    "naka.verification",
+    "naka.enquiry",
+    "naka.engagement",
+    "naka.identity",
+]
+
+[[tool.importlinter.contracts]]
+name = "catalog: dependencies point inward only"
+type = "layers"
+layers = [
+    "naka.catalog.api",
+    "naka.catalog.infrastructure",
+    "naka.catalog.application",
+    "naka.catalog.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "verification: dependencies point inward only"
+type = "layers"
+layers = [
+    "naka.verification.api",
+    "naka.verification.infrastructure",
+    "naka.verification.application",
+    "naka.verification.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "enquiry: dependencies point inward only"
+type = "layers"
+layers = [
+    "naka.enquiry.api",
+    "naka.enquiry.infrastructure",
+    "naka.enquiry.application",
+    "naka.enquiry.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "engagement: dependencies point inward only"
+type = "layers"
+layers = [
+    "naka.engagement.api",
+    "naka.engagement.infrastructure",
+    "naka.engagement.application",
+    "naka.engagement.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "identity: dependencies point inward only"
+type = "layers"
+layers = [
+    "naka.identity.api",
+    "naka.identity.infrastructure",
+    "naka.identity.application",
+    "naka.identity.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "shared: dependencies point inward only"
+type = "layers"
+layers = [
+    "naka.shared.api",
+    "naka.shared.infrastructure",
+    "naka.shared.application",
+    "naka.shared.domain",
+]
 
 # ---------------------------------------------------------------------------
 # mypy
