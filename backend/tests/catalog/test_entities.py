@@ -99,3 +99,24 @@ class TestBusinessCanReceiveEnquiries:
         )
         other_routable = {CategoryId.new()}
         assert business.can_receive_enquiries(routable_category_ids=other_routable) is False
+
+
+class TestBusinessPublish:
+    @pytest.mark.parametrize("state", [PublicationState.DRAFT, PublicationState.SUSPENDED])
+    def test_publish_lands_on_unverified(self, state: PublicationState) -> None:
+        business = make_business(publication_state=state)
+        published = business.publish()
+        assert published.publication_state is PublicationState.PUBLISHED_UNVERIFIED
+
+    @pytest.mark.parametrize(
+        "state",
+        [
+            PublicationState.PUBLISHED_UNVERIFIED,
+            PublicationState.PUBLISHED_VERIFIED,
+            PublicationState.CLOSED,
+        ],
+    )
+    def test_cannot_publish_from_other_states(self, state: PublicationState) -> None:
+        business = make_business(publication_state=state)
+        with pytest.raises(ValueError):
+            business.publish()

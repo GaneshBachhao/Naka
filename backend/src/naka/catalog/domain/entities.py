@@ -1,6 +1,7 @@
 # backend/src/naka/catalog/domain/entities.py
 from __future__ import annotations
 
+import dataclasses
 import re
 from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
@@ -107,3 +108,12 @@ class Business:
         if self.whatsapp_number is None:
             return False
         return any(category_id in routable_category_ids for category_id in self.category_ids)
+
+    def publish(self) -> Business:
+        # Publishing lands on PUBLISHED_UNVERIFIED, never PUBLISHED_VERIFIED -
+        # verification is RecordVerification's job, a separate process, per
+        # CLAUDE.md's "unverified listings publish immediately but never
+        # receive routed enquiries" rule.
+        if self.publication_state not in (PublicationState.DRAFT, PublicationState.SUSPENDED):
+            raise ValueError(f"cannot publish a business that is {self.publication_state}")
+        return dataclasses.replace(self, publication_state=PublicationState.PUBLISHED_UNVERIFIED)

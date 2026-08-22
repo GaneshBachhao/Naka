@@ -196,3 +196,8 @@ disallow_untyped_defs = false
 asyncio_mode = "auto"
 testpaths = ["tests"]
 addopts = "--cov=naka --cov-report=term-missing"
+
+[tool.coverage.report]
+exclude_also = [
+    "^\\s*\\.\\.\\.\\s*$", # Protocol method stubs have nothing to execute
+]
