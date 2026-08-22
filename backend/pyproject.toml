@@ -1,0 +1,124 @@
+# backend/pyproject.toml
+[project]
+name = "naka"
+version = "0.1.0"
+description = "Naka — hyperlocal availability and routing platform"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30",
+    "alembic>=1.14",
+    "redis>=5.2",
+    "arq>=0.26",
+    "anthropic>=0.40",
+    "pgvector>=0.3.6",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8",
+    "black>=24.10",
+    "mypy>=1.13",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/naka"]
+
+# ---------------------------------------------------------------------------
+# black
+# ---------------------------------------------------------------------------
+[tool.black]
+line-length = 100
+target-version = ["py313"]
+
+# ---------------------------------------------------------------------------
+# ruff
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "F",      # pyflakes
+    "I",      # isort
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "SIM",    # flake8-simplify
+    "TID251", # flake8-tidy-imports: banned-api (layer/context boundaries)
+]
+
+# Layer- and context-boundary enforcement.
+#
+# Two concerns share this one rule, both scoped to "is this file inside a
+# domain/ package":
+#   1. Domain must stay pure Python — no framework or I/O SDK imports.
+#   2. Domain must not import another bounded context's domain objects —
+#      contexts talk through domain events or application services instead
+#      (naka.shared.domain is the one exception: it's the common base every
+#      context is allowed to depend on).
+#
+# Within a context's own domain package, reference sibling modules with
+# relative imports (`from .entities import Business`) rather than the
+# absolute path — that's normal style here, and it's also what keeps a
+# context from tripping its own ban below.
+#
+# NOTE: per-file-ignores below lift ALL of TID251 (both concerns) for
+# application/infrastructure/api/tests, since ruff can't ignore individual
+# banned-api entries per file. Cross-context isolation in those layers is
+# enforced by convention and review, not by this rule — only domain/ gets
+# hard enforcement.
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"fastapi" = { msg = "Domain is pure Python. Route FastAPI through the API layer." }
+"sqlalchemy" = { msg = "Domain is pure Python. Access persistence through a repository port." }
+"httpx" = { msg = "Domain is pure Python. Call external services through a Port." }
+"redis" = { msg = "Domain is pure Python. Access Redis through a Port." }
+"anthropic" = { msg = "Domain is pure Python. Call AI providers through AIClientPort." }
+"naka.catalog.domain" = { msg = "Cross-context domain import. Use a domain event or an application service instead." }
+"naka.verification.domain" = { msg = "Cross-context domain import. Use a domain event or an application service instead." }
+"naka.enquiry.domain" = { msg = "Cross-context domain import. Use a domain event or an application service instead." }
+"naka.engagement.domain" = { msg = "Cross-context domain import. Use a domain event or an application service instead." }
+"naka.identity.domain" = { msg = "Cross-context domain import. Use a domain event or an application service instead." }
+
+[tool.ruff.lint.per-file-ignores]
+"**/application/**" = ["TID251"]
+"**/infrastructure/**" = ["TID251"]
+"**/api/**" = ["TID251"]
+"tests/**" = ["TID251"]
+"src/naka/main.py" = ["TID251"]
+
+# ---------------------------------------------------------------------------
+# mypy
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.13"
+mypy_path = "src"
+explicit_package_bases = true
+strict = true
+warn_unreachable = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "--cov=naka --cov-report=term-missing"
