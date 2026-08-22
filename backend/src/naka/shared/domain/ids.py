@@ -32,3 +32,7 @@ class CategoryId(EntityId):
 
 class BusinessId(EntityId):
     pass
+
+
+class VerificationId(EntityId):
+    pass
