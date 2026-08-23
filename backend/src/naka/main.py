@@ -11,6 +11,7 @@ from redis.asyncio import Redis
 
 from naka.catalog.api.router import ops_catalog_router
 from naka.catalog.api.router import ops_router as catalog_ops_router
+from naka.catalog.api.router import public_router as catalog_public_router
 from naka.enquiry.api.router import ops_router as enquiry_ops_router
 from naka.enquiry.api.router import public_router as enquiry_public_router
 from naka.shared.infrastructure.database import create_engine, create_session_factory
@@ -54,6 +55,7 @@ def create_app() -> FastAPI:
 
     app.include_router(enquiry_public_router)
     app.include_router(enquiry_ops_router)
+    app.include_router(catalog_public_router)
     app.include_router(catalog_ops_router)
     app.include_router(ops_catalog_router)
     app.include_router(verification_ops_router)

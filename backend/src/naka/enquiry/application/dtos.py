@@ -49,6 +49,23 @@ class RoutedRequestPageDTO(BaseModel):
     has_responded: bool | None = None
 
 
+class WinningAnswerDTO(BaseModel):
+    price_paise: int | None
+    note: str
+
+
+class EnquiryStatusDTO(BaseModel):
+    """Backs the public site's live status page - only ever surfaces the
+    winning HAVE_IT response, never intermediate DONT_HAVE ones, mirroring
+    Enquiry.winning_response's own "first HAVE_IT wins" semantics."""
+
+    outcome: Literal["found", "not_found"]
+    status: str | None = None
+    minutes_ago: int | None = None
+    routed_count: int | None = None
+    answer: WinningAnswerDTO | None = None
+
+
 class EnquiryQueueItemDTO(BaseModel):
     id: uuid.UUID
     status: str

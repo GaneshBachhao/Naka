@@ -54,3 +54,69 @@ export async function postResponse(
   }
   return response.json();
 }
+
+export type Region = {
+  id: string;
+  slug: string;
+  name_mr: string;
+  name_hi: string;
+  name_en: string;
+  district: string;
+  state: string;
+};
+
+/** GET /api/regions/{slug} - backs /[region]. Not found (unknown or
+ * inactive slug) is a normal outcome, not an error - the route itself
+ * decides what to render, same as getResponsePage's not_found handling. */
+export async function getRegion(slug: string): Promise<Region | null> {
+  const response = await fetch(`${API_BASE_URL}/api/regions/${encodeURIComponent(slug)}`, {
+    cache: "no-store",
+  });
+  if (!response.ok) return null;
+  return response.json();
+}
+
+export type SubmitEnquiryResult = { id: string; status: string };
+
+export async function submitEnquiry(body: {
+  region_id: string;
+  raw_text: string;
+  customer_phone: string;
+}): Promise<SubmitEnquiryResult> {
+  const response = await fetch(`${API_BASE_URL}/api/enquiries`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const detail = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(detail.detail ?? "enquiry submission failed");
+  }
+  return response.json();
+}
+
+export type WinningAnswer = { price_paise: number | null; note: string };
+
+export type EnquiryStatus = {
+  outcome: "found" | "not_found";
+  status: string | null;
+  minutes_ago: number | null;
+  routed_count: number | null;
+  answer: WinningAnswer | null;
+};
+
+/**
+ * GET /api/enquiries/{id}/status - backs the ask box's live wait page.
+ * Always fetched fresh, since "still waiting" vs "answered" is exactly
+ * the kind of state that must never be served stale.
+ */
+export async function getEnquiryStatus(enquiryId: string): Promise<EnquiryStatus> {
+  const response = await fetch(`${API_BASE_URL}/api/enquiries/${enquiryId}/status`, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    return { outcome: "not_found", status: null, minutes_ago: null, routed_count: null, answer: null };
+  }
+  return response.json();
+}

@@ -10,6 +10,7 @@ from naka.enquiry.application.dtos import (
     EnquiryDetailDTO,
     EnquiryDTO,
     EnquiryQueueItemDTO,
+    EnquiryStatusDTO,
     ExpiredEnquirySummary,
     ParsedIntentDTO,
     RecordBusinessResponseRequest,
@@ -20,6 +21,7 @@ from naka.enquiry.application.dtos import (
     RouteEnquiryResult,
     RoutingSuggestionDTO,
     SubmitEnquiryRequest,
+    WinningAnswerDTO,
 )
 from naka.enquiry.application.errors import (
     EnquiryNotFoundError,
@@ -81,6 +83,39 @@ class SubmitEnquiry:
         await self._enquiries.add(enquiry)
         await self._outbox.enqueue(events)
         return _to_dto(enquiry)
+
+
+class GetEnquiryStatus:
+    """Backs the public site's live status page - a customer polls this
+    with the id SubmitEnquiry gave them (unauthenticated, like the dealer
+    response page's token: an unguessable UUID4 is the only credential
+    this needs). Only ever reports the winning HAVE_IT answer, never
+    intermediate DONT_HAVE responses, so silence stays silence until it
+    genuinely isn't (CLAUDE.md rule 3)."""
+
+    def __init__(self, enquiries: EnquiryRepository, clock: Clock) -> None:
+        self._enquiries = enquiries
+        self._clock = clock
+
+    async def execute(self, enquiry_id: EnquiryId) -> EnquiryStatusDTO:
+        enquiry = await self._enquiries.get(enquiry_id)
+        if enquiry is None:
+            return EnquiryStatusDTO(outcome="not_found")
+
+        now = self._clock.now()
+        winning = enquiry.winning_response
+        answer = (
+            WinningAnswerDTO(price_paise=winning.price_paise, note=winning.note)
+            if winning is not None
+            else None
+        )
+        return EnquiryStatusDTO(
+            outcome="found",
+            status=enquiry.status.value,
+            minutes_ago=int((now - enquiry.created_at).total_seconds() // 60),
+            routed_count=len(enquiry.routed_requests),
+            answer=answer,
+        )
 
 
 class ParseEnquiry:

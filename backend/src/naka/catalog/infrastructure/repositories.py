@@ -43,12 +43,6 @@ class SqlAlchemyBusinessRepository:
         return [business_to_domain(model) for model in result.scalars().all()]
 
 
-# Region still has no application-layer port or use case consumer - T10
-# (seeding Sakri's region record) will need it. Locality/Category are now
-# backed by ListLocalities/ListCategories (T8: the ops console's business
-# form needs somewhere to source its dropdowns from).
-
-
 class SqlAlchemyRegionRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -59,6 +53,12 @@ class SqlAlchemyRegionRepository:
 
     async def add(self, region: Region) -> None:
         self._session.add(region_to_model(region))
+
+    async def get_by_slug(self, slug: str) -> Region | None:
+        stmt = select(RegionModel).where(RegionModel.slug == slug)
+        result = await self._session.execute(stmt)
+        model = result.scalars().first()
+        return region_to_domain(model) if model is not None else None
 
 
 class SqlAlchemyLocalityRepository:

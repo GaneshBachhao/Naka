@@ -1,7 +1,7 @@
 # backend/tests/catalog/fakes.py
 from __future__ import annotations
 
-from naka.catalog.domain.entities import Business, Category, Locality
+from naka.catalog.domain.entities import Business, Category, Locality, Region
 from naka.shared.domain.ids import BusinessId, RegionId
 
 
@@ -36,3 +36,11 @@ class FakeCategoryRepository:
 
     async def list_all(self) -> list[Category]:
         return list(self.categories)
+
+
+class FakeRegionRepository:
+    def __init__(self, regions: list[Region] | None = None) -> None:
+        self.regions = regions or []
+
+    async def get_by_slug(self, slug: str) -> Region | None:
+        return next((r for r in self.regions if r.slug == slug), None)

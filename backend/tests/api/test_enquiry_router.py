@@ -11,6 +11,7 @@ from naka.enquiry.api.deps import (
     get_daily_counters_use_case,
     get_enquiry_detail_use_case,
     get_enquiry_queue_use_case,
+    get_enquiry_status_use_case,
     get_list_operator_queue_use_case,
     get_mark_operator_message_sent_use_case,
     get_parse_enquiry_use_case,
@@ -25,11 +26,13 @@ from naka.enquiry.application.dtos import (
     EnquiryDetailDTO,
     EnquiryDTO,
     EnquiryQueueItemDTO,
+    EnquiryStatusDTO,
     RecordBusinessResponseResult,
     RoutedMessageDTO,
     RoutedRequestPageDTO,
     RouteEnquiryResult,
     RoutingSuggestionDTO,
+    WinningAnswerDTO,
 )
 from naka.enquiry.application.errors import (
     EnquiryNotFoundError,
@@ -80,6 +83,47 @@ class TestSubmitEnquiry:
         limited = client.post("/api/enquiries", json=body)
 
         assert limited.status_code == 429
+
+
+class TestGetEnquiryStatus:
+    def test_returns_status_for_a_known_enquiry(self, app: FastAPI, client: TestClient) -> None:
+        dto = EnquiryStatusDTO(outcome="found", status="routed", minutes_ago=2, routed_count=3)
+        app.dependency_overrides[get_enquiry_status_use_case] = lambda: StubUseCase(result=dto)
+
+        response = client.get(f"/api/enquiries/{uuid.uuid4()}/status")
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "routed"
+        assert response.json()["routed_count"] == 3
+
+    def test_returns_the_winning_answer_once_answered(
+        self, app: FastAPI, client: TestClient
+    ) -> None:
+        dto = EnquiryStatusDTO(
+            outcome="found",
+            status="answered",
+            minutes_ago=6,
+            routed_count=3,
+            answer=WinningAnswerDTO(price_paise=25000, note="स्टॉकमध्ये आहे"),
+        )
+        app.dependency_overrides[get_enquiry_status_use_case] = lambda: StubUseCase(result=dto)
+
+        response = client.get(f"/api/enquiries/{uuid.uuid4()}/status")
+
+        assert response.status_code == 200
+        assert response.json()["answer"]["price_paise"] == 25000
+
+    def test_returns_not_found_outcome_for_unknown_id(
+        self, app: FastAPI, client: TestClient
+    ) -> None:
+        app.dependency_overrides[get_enquiry_status_use_case] = lambda: StubUseCase(
+            result=EnquiryStatusDTO(outcome="not_found")
+        )
+
+        response = client.get(f"/api/enquiries/{uuid.uuid4()}/status")
+
+        assert response.status_code == 200
+        assert response.json()["outcome"] == "not_found"
 
 
 class TestGetResponsePage:

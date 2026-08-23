@@ -14,10 +14,11 @@ from naka.catalog.api.deps import (
     get_list_categories_use_case,
     get_list_localities_use_case,
     get_publish_business_use_case,
+    get_region_by_slug_use_case,
     get_update_business_use_case,
 )
-from naka.catalog.application.dtos import BusinessDTO, CategoryDTO, LocalityDTO
-from naka.catalog.application.errors import BusinessNotFoundError
+from naka.catalog.application.dtos import BusinessDTO, CategoryDTO, LocalityDTO, RegionDTO
+from naka.catalog.application.errors import BusinessNotFoundError, RegionNotFoundError
 from tests.api.conftest import ops_headers
 from tests.api.fakes import StubUseCase
 
@@ -210,3 +211,33 @@ class TestListCategories:
 
         assert response.status_code == 200
         assert response.json()[0]["slug"] == "pesticide-dealer"
+
+
+class TestGetRegion:
+    def test_returns_the_region_with_no_auth_required(
+        self, app: FastAPI, client: TestClient
+    ) -> None:
+        dto = RegionDTO(
+            id=uuid.uuid4(),
+            slug="sakri",
+            name_mr="साक्री",
+            name_hi="साक्री",
+            name_en="Sakri",
+            district="Dhule",
+            state="Maharashtra",
+        )
+        app.dependency_overrides[get_region_by_slug_use_case] = lambda: StubUseCase(result=dto)
+
+        response = client.get("/api/regions/sakri")
+
+        assert response.status_code == 200
+        assert response.json()["name_en"] == "Sakri"
+
+    def test_maps_not_found_to_404(self, app: FastAPI, client: TestClient) -> None:
+        app.dependency_overrides[get_region_by_slug_use_case] = lambda: StubUseCase(
+            exception=RegionNotFoundError("does-not-exist")
+        )
+
+        response = client.get("/api/regions/does-not-exist")
+
+        assert response.status_code == 404

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from naka.catalog.domain.entities import Business, Category, Locality
+from naka.catalog.domain.entities import Business, Category, Locality, Region
 from naka.shared.domain.ids import BusinessId, RegionId
 
 
@@ -15,6 +15,10 @@ class BusinessRepository(Protocol):
     async def update(self, business: Business) -> None: ...
 
     async def list_all(self) -> list[Business]: ...
+
+
+class RegionRepository(Protocol):
+    async def get_by_slug(self, slug: str) -> Region | None: ...
 
 
 class LocalityRepository(Protocol):

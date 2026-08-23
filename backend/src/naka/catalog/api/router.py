@@ -12,6 +12,7 @@ from naka.catalog.api.deps import (
     get_list_categories_use_case,
     get_list_localities_use_case,
     get_publish_business_use_case,
+    get_region_by_slug_use_case,
     get_update_business_use_case,
 )
 from naka.catalog.application.dtos import (
@@ -19,12 +20,14 @@ from naka.catalog.application.dtos import (
     CategoryDTO,
     CreateBusinessRequest,
     LocalityDTO,
+    RegionDTO,
     UpdateBusinessRequest,
 )
-from naka.catalog.application.errors import BusinessNotFoundError
+from naka.catalog.application.errors import BusinessNotFoundError, RegionNotFoundError
 from naka.catalog.application.use_cases import (
     CreateBusiness,
     GetBusiness,
+    GetRegionBySlug,
     ListBusinesses,
     ListCategories,
     ListLocalities,
@@ -32,7 +35,12 @@ from naka.catalog.application.use_cases import (
     UpdateBusiness,
 )
 from naka.shared.api.deps import require_ops_auth
+from naka.shared.api.rate_limit import rate_limit
 from naka.shared.domain.ids import BusinessId, RegionId
+
+_region_lookup_rate_limit = rate_limit(limit=60, window_seconds=60)
+
+public_router = APIRouter(tags=["regions"])
 
 ops_router = APIRouter(
     prefix="/ops/businesses",
@@ -45,6 +53,22 @@ ops_catalog_router = APIRouter(
     tags=["ops: catalog"],
     dependencies=[Depends(require_ops_auth)],
 )
+
+
+@public_router.get(
+    "/api/regions/{slug}",
+    response_model=RegionDTO,
+    summary="Look up a region by slug - backs the public site's /[region] route",
+    dependencies=[Depends(_region_lookup_rate_limit)],
+)
+async def get_region(
+    slug: str,
+    use_case: GetRegionBySlug = Depends(get_region_by_slug_use_case),
+) -> RegionDTO:
+    try:
+        return await use_case.execute(slug)
+    except RegionNotFoundError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Region not found") from exc
 
 
 @ops_router.post(

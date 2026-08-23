@@ -9,6 +9,7 @@ from naka.enquiry.api.deps import (
     get_daily_counters_use_case,
     get_enquiry_detail_use_case,
     get_enquiry_queue_use_case,
+    get_enquiry_status_use_case,
     get_list_operator_queue_use_case,
     get_mark_operator_message_sent_use_case,
     get_parse_enquiry_use_case,
@@ -24,6 +25,7 @@ from naka.enquiry.application.dtos import (
     EnquiryDetailDTO,
     EnquiryDTO,
     EnquiryQueueItemDTO,
+    EnquiryStatusDTO,
     RecordBusinessResponseRequest,
     RecordBusinessResponseResult,
     RoutedRequestPageDTO,
@@ -40,6 +42,7 @@ from naka.enquiry.application.errors import (
 from naka.enquiry.application.use_cases import (
     GetDailyCounters,
     GetEnquiryDetail,
+    GetEnquiryStatus,
     GetRoutedRequestByToken,
     ListEnquiryQueue,
     ParseEnquiry,
@@ -56,6 +59,7 @@ from naka.shared.domain.ids import BusinessId, EnquiryId
 _submit_rate_limit = rate_limit(limit=10, window_seconds=60)
 _response_page_rate_limit = rate_limit(limit=30, window_seconds=60)
 _record_response_rate_limit = rate_limit(limit=10, window_seconds=60)
+_enquiry_status_rate_limit = rate_limit(limit=60, window_seconds=60)
 
 public_router = APIRouter(tags=["enquiries"])
 ops_router = APIRouter(
@@ -75,6 +79,19 @@ async def submit_enquiry(
     use_case: SubmitEnquiry = Depends(get_submit_enquiry_use_case),
 ) -> EnquiryDTO:
     return await use_case.execute(request)
+
+
+@public_router.get(
+    "/api/enquiries/{enquiry_id}/status",
+    response_model=EnquiryStatusDTO,
+    summary="Live status for the public site's ask-and-wait page",
+    dependencies=[Depends(_enquiry_status_rate_limit)],
+)
+async def get_enquiry_status(
+    enquiry_id: uuid.UUID,
+    use_case: GetEnquiryStatus = Depends(get_enquiry_status_use_case),
+) -> EnquiryStatusDTO:
+    return await use_case.execute(EnquiryId(enquiry_id))
 
 
 @public_router.get(

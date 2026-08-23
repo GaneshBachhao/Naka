@@ -11,10 +11,11 @@ from naka.catalog.application.dtos import (
     DayHoursRequest,
     UpdateBusinessRequest,
 )
-from naka.catalog.application.errors import BusinessNotFoundError
+from naka.catalog.application.errors import BusinessNotFoundError, RegionNotFoundError
 from naka.catalog.application.use_cases import (
     CreateBusiness,
     GetBusiness,
+    GetRegionBySlug,
     ListBusinesses,
     ListCategories,
     ListLocalities,
@@ -23,11 +24,12 @@ from naka.catalog.application.use_cases import (
 )
 from naka.catalog.domain.entities import PublicationState
 from naka.shared.domain.ids import BusinessId, RegionId
-from tests.catalog.factories import make_category, make_locality
+from tests.catalog.factories import make_category, make_locality, make_region
 from tests.catalog.fakes import (
     FakeBusinessRepository,
     FakeCategoryRepository,
     FakeLocalityRepository,
+    FakeRegionRepository,
 )
 
 
@@ -185,3 +187,26 @@ class TestListCategories:
 
         assert [dto.id for dto in dtos] == [category.id.value]
         assert dtos[0].name_mr == category.names.mr
+
+
+class TestGetRegionBySlug:
+    async def test_returns_the_region(self) -> None:
+        region = make_region(slug="sakri")
+        repo = FakeRegionRepository([region])
+
+        dto = await GetRegionBySlug(repo).execute("sakri")
+
+        assert dto.id == region.id.value
+        assert dto.name_mr == region.name_mr
+
+    async def test_raises_when_slug_unknown(self) -> None:
+        repo = FakeRegionRepository([])
+        with pytest.raises(RegionNotFoundError):
+            await GetRegionBySlug(repo).execute("does-not-exist")
+
+    async def test_raises_when_region_is_inactive(self) -> None:
+        region = make_region(slug="sakri", active=False)
+        repo = FakeRegionRepository([region])
+
+        with pytest.raises(RegionNotFoundError):
+            await GetRegionBySlug(repo).execute("sakri")

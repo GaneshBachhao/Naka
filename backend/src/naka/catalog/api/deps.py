@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from naka.catalog.application.use_cases import (
     CreateBusiness,
     GetBusiness,
+    GetRegionBySlug,
     ListBusinesses,
     ListCategories,
     ListLocalities,
@@ -17,6 +18,7 @@ from naka.catalog.infrastructure.repositories import (
     SqlAlchemyBusinessRepository,
     SqlAlchemyCategoryRepository,
     SqlAlchemyLocalityRepository,
+    SqlAlchemyRegionRepository,
 )
 from naka.shared.api.deps import get_session
 
@@ -79,3 +81,15 @@ def get_list_categories_use_case(
     categories: SqlAlchemyCategoryRepository = Depends(get_category_repository),
 ) -> ListCategories:
     return ListCategories(categories)
+
+
+def get_region_repository(
+    session: AsyncSession = Depends(get_session),
+) -> SqlAlchemyRegionRepository:
+    return SqlAlchemyRegionRepository(session)
+
+
+def get_region_by_slug_use_case(
+    regions: SqlAlchemyRegionRepository = Depends(get_region_repository),
+) -> GetRegionBySlug:
+    return GetRegionBySlug(regions)

@@ -1,4 +1,4 @@
-function formatAgo(minutesAgo: number): string {
+export function formatAgo(minutesAgo: number): string {
   if (minutesAgo < 1) return "आत्ताच";
   if (minutesAgo < 60) return `${minutesAgo} मिनिटांपूर्वी`;
   const hours = Math.floor(minutesAgo / 60);

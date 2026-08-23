@@ -16,6 +16,7 @@ from naka.enquiry.application.use_cases import (
     ExpireEnquiryWindow,
     GetDailyCounters,
     GetEnquiryDetail,
+    GetEnquiryStatus,
     GetRoutedRequestByToken,
     ListEnquiryQueue,
     ParseEnquiry,
@@ -25,7 +26,7 @@ from naka.enquiry.application.use_cases import (
     SuggestRoutingCandidates,
 )
 from naka.enquiry.domain.entities import Enquiry
-from naka.enquiry.domain.value_objects import EnquiryStatus
+from naka.enquiry.domain.value_objects import EnquiryStatus, ResponseKind
 from naka.shared.domain.ids import BusinessId, EnquiryId
 from tests.catalog.factories import make_locality
 from tests.enquiry.factories import (
@@ -70,6 +71,55 @@ class TestSubmitEnquiry:
         assert dto.status == EnquiryStatus.RECEIVED.value
         assert len(repo.by_id) == 1
         assert len(outbox.enqueued) == 1
+
+
+class TestGetEnquiryStatus:
+    async def test_unknown_id_returns_not_found(self) -> None:
+        use_case = GetEnquiryStatus(FakeEnquiryRepository(), FixedClock(_NOW))
+
+        dto = await use_case.execute(EnquiryId.new())
+
+        assert dto.outcome == "not_found"
+
+    async def test_routed_enquiry_reports_routed_count_with_no_answer_yet(self) -> None:
+        enquiry = make_routed_enquiry()
+        repo = FakeEnquiryRepository([enquiry])
+        use_case = GetEnquiryStatus(repo, FixedClock(_NOW + dt.timedelta(minutes=3)))
+
+        dto = await use_case.execute(enquiry.id)
+
+        assert dto.outcome == "found"
+        assert dto.status == EnquiryStatus.ROUTED.value
+        assert dto.minutes_ago == 3
+        assert dto.routed_count == 3
+        assert dto.answer is None
+
+    async def test_answered_enquiry_reports_the_winning_answer(self) -> None:
+        business_a, business_b, business_c = BusinessId.new(), BusinessId.new(), BusinessId.new()
+        enquiry = make_routed_enquiry(business_ids=(business_a, business_b, business_c))
+        response = make_response(business_id=business_a, price_paise=25000, note="स्टॉकमध्ये आहे")
+        answered, _ = enquiry.record_response(response, response.responded_at)
+        repo = FakeEnquiryRepository([answered])
+        use_case = GetEnquiryStatus(repo, FixedClock(_NOW + dt.timedelta(minutes=5)))
+
+        dto = await use_case.execute(answered.id)
+
+        assert dto.status == EnquiryStatus.ANSWERED.value
+        assert dto.answer is not None
+        assert dto.answer.price_paise == 25000
+        assert dto.answer.note == "स्टॉकमध्ये आहे"
+
+    async def test_does_not_report_a_dont_have_response_as_an_answer(self) -> None:
+        business_a, business_b, business_c = BusinessId.new(), BusinessId.new(), BusinessId.new()
+        enquiry = make_routed_enquiry(business_ids=(business_a, business_b, business_c))
+        response = make_response(business_id=business_a, kind=ResponseKind.DONT_HAVE)
+        updated, _ = enquiry.record_response(response, response.responded_at)
+        repo = FakeEnquiryRepository([updated])
+        use_case = GetEnquiryStatus(repo, FixedClock(_NOW + dt.timedelta(minutes=5)))
+
+        dto = await use_case.execute(updated.id)
+
+        assert dto.answer is None
 
 
 class TestParseEnquiry:

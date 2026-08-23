@@ -63,6 +63,16 @@ class UpdateBusinessRequest(BaseModel):
     attributes: list[str] = Field(default_factory=list)
 
 
+class RegionDTO(BaseModel):
+    id: uuid.UUID
+    slug: str
+    name_mr: str
+    name_hi: str
+    name_en: str
+    district: str
+    state: str
+
+
 class LocalityDTO(BaseModel):
     id: uuid.UUID
     region_id: uuid.UUID

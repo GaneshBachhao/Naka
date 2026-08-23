@@ -9,13 +9,15 @@ from naka.catalog.application.dtos import (
     CreateBusinessRequest,
     DayHoursRequest,
     LocalityDTO,
+    RegionDTO,
     UpdateBusinessRequest,
 )
-from naka.catalog.application.errors import BusinessNotFoundError
+from naka.catalog.application.errors import BusinessNotFoundError, RegionNotFoundError
 from naka.catalog.application.ports import (
     BusinessRepository,
     CategoryRepository,
     LocalityRepository,
+    RegionRepository,
 )
 from naka.catalog.domain.entities import Business, PublicationState
 from naka.catalog.domain.value_objects import Coordinates, DayHours, OpeningHours, Weekday
@@ -194,3 +196,27 @@ class ListCategories:
             )
             for cat in await self._categories.list_all()
         ]
+
+
+class GetRegionBySlug:
+    """Backs the public site's /[region] route. Inactive regions 404 the
+    same as unknown slugs - CLAUDE.md's region_id-on-every-aggregate rule
+    means a region can exist in the data model long before (or after) it's
+    meant to be publicly reachable."""
+
+    def __init__(self, regions: RegionRepository) -> None:
+        self._regions = regions
+
+    async def execute(self, slug: str) -> RegionDTO:
+        region = await self._regions.get_by_slug(slug)
+        if region is None or not region.active:
+            raise RegionNotFoundError(slug)
+        return RegionDTO(
+            id=region.id.value,
+            slug=region.slug,
+            name_mr=region.name_mr,
+            name_hi=region.name_hi,
+            name_en=region.name_en,
+            district=region.district,
+            state=region.state,
+        )

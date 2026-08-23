@@ -101,6 +101,22 @@ class TestSqlAlchemyRegionRepository:
 
         assert await repo.get(region.id) == region
 
+    async def test_get_by_slug_returns_none_when_missing(self, db_session: AsyncSession) -> None:
+        repo = SqlAlchemyRegionRepository(db_session)
+        assert await repo.get_by_slug("no-such-region") is None
+
+    async def test_get_by_slug_finds_the_region(self, db_session: AsyncSession) -> None:
+        repo = SqlAlchemyRegionRepository(db_session)
+        region = make_region(slug="dhule-city")
+
+        await repo.add(region)
+        await db_session.flush()
+        db_session.expunge_all()
+
+        found = await repo.get_by_slug("dhule-city")
+        assert found is not None
+        assert found.id == region.id
+
 
 class TestSqlAlchemyLocalityRepository:
     async def test_round_trips_a_locality(self, db_session: AsyncSession) -> None:

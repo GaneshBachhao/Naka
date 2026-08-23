@@ -11,6 +11,7 @@ from naka.catalog.infrastructure.repositories import (
 from naka.enquiry.application.use_cases import (
     GetDailyCounters,
     GetEnquiryDetail,
+    GetEnquiryStatus,
     GetRoutedRequestByToken,
     ListEnquiryQueue,
     ParseEnquiry,
@@ -75,6 +76,13 @@ def get_submit_enquiry_use_case(
     clock: SystemClock = Depends(get_clock),
 ) -> SubmitEnquiry:
     return SubmitEnquiry(enquiries, outbox, clock)
+
+
+def get_enquiry_status_use_case(
+    enquiries: SqlAlchemyEnquiryRepository = Depends(get_enquiry_repository),
+    clock: SystemClock = Depends(get_clock),
+) -> GetEnquiryStatus:
+    return GetEnquiryStatus(enquiries, clock)
 
 
 def get_parse_enquiry_use_case(
