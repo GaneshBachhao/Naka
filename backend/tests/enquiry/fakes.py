@@ -35,6 +35,10 @@ class FakeEnquiryRepository:
     async def list_routed(self) -> list[Enquiry]:
         return [e for e in self.by_id.values() if e.status is EnquiryStatus.ROUTED]
 
+    async def list_recent(self, limit: int = 100) -> list[Enquiry]:
+        ordered = sorted(self.by_id.values(), key=lambda e: e.created_at, reverse=True)
+        return ordered[:limit]
+
 
 class FakeAIClientPort:
     def __init__(self, intent: ParsedIntent) -> None:

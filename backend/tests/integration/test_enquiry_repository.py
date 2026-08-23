@@ -112,3 +112,17 @@ class TestSqlAlchemyEnquiryRepository:
         result_ids = {e.id for e in results}
         assert routed.id in result_ids
         assert received.id not in result_ids
+
+    async def test_list_recent_orders_newest_first_and_respects_limit(
+        self, db_session: AsyncSession
+    ) -> None:
+        repo = SqlAlchemyEnquiryRepository(db_session)
+        older = make_received_enquiry(created_at=NOW - dt.timedelta(hours=1))
+        newer = make_received_enquiry(created_at=NOW)
+        await repo.add(older)
+        await repo.add(newer)
+        await db_session.flush()
+        db_session.expunge_all()
+
+        [only] = await repo.list_recent(limit=1)
+        assert only.id == newer.id

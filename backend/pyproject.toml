@@ -17,6 +17,7 @@ dependencies = [
     "anthropic>=0.40",
     "pgvector>=0.3.6",
     "tzdata>=2024.2",
+    "pyjwt>=2.9",
 ]
 
 [dependency-groups]
@@ -87,6 +88,11 @@ select = [
 "tests/**" = ["TID251"]
 "src/naka/main.py" = ["TID251"]
 "alembic/**" = ["TID251"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's own idiom is Depends(...) as an argument default - B008 doesn't
+# know that's special-cased by FastAPI at call time, not evaluated per-call.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.params.Depends"]
 
 # ---------------------------------------------------------------------------
 # import-linter — bounded-context and layer boundaries

@@ -4,12 +4,12 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, Text
+from sqlalchemy import DateTime, String, Text, select
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
-from naka.shared.application.ports import Clock
+from naka.shared.application.ports import Clock, OperatorQueueMessage
 from naka.shared.domain.phone_number import PhoneNumber
 from naka.shared.infrastructure.database import Base
 
@@ -53,3 +53,38 @@ class ManualMessagingAdapter:
                 created_at=self._clock.now(),
             )
         )
+
+
+def _to_dto(model: OperatorQueueMessageModel) -> OperatorQueueMessage:
+    return OperatorQueueMessage(
+        id=model.id,
+        recipient_kind=model.recipient_kind,
+        phone_number=model.phone_number,
+        message=model.message,
+        created_at=model.created_at,
+        sent_at=model.sent_at,
+    )
+
+
+class SqlAlchemyOperatorQueue:
+    """The read/manage side of the same table ManualMessagingAdapter writes
+    to - kept as a separate class since it serves a different caller (the
+    ops API/console) with a different port (OperatorQueuePort, not
+    MessagingPort)."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def list_pending(self) -> list[OperatorQueueMessage]:
+        stmt = (
+            select(OperatorQueueMessageModel)
+            .where(OperatorQueueMessageModel.sent_at.is_(None))
+            .order_by(OperatorQueueMessageModel.created_at)
+        )
+        result = await self._session.execute(stmt)
+        return [_to_dto(model) for model in result.scalars().all()]
+
+    async def mark_sent(self, message_id: uuid.UUID, sent_at: datetime) -> None:
+        model = await self._session.get(OperatorQueueMessageModel, message_id)
+        if model is not None:
+            model.sent_at = sent_at

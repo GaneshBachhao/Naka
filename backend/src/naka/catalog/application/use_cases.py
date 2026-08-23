@@ -77,3 +77,14 @@ class PublishBusiness:
         published = business.publish()
         await self._businesses.update(published)
         return _to_dto(published)
+
+
+class GetBusiness:
+    def __init__(self, businesses: BusinessRepository) -> None:
+        self._businesses = businesses
+
+    async def execute(self, business_id: BusinessId) -> BusinessDTO:
+        business = await self._businesses.get(business_id)
+        if business is None:
+            raise BusinessNotFoundError(business_id)
+        return _to_dto(business)

@@ -39,3 +39,8 @@ class SqlAlchemyEnquiryRepository:
         stmt = select(EnquiryModel).where(EnquiryModel.status == EnquiryStatus.ROUTED.value)
         result = await self._session.execute(stmt)
         return [enquiry_to_domain(model) for model in result.scalars().all()]
+
+    async def list_recent(self, limit: int = 100) -> list[Enquiry]:
+        stmt = select(EnquiryModel).order_by(EnquiryModel.created_at.desc()).limit(limit)
+        result = await self._session.execute(stmt)
+        return [enquiry_to_domain(model) for model in result.scalars().all()]

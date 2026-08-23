@@ -10,6 +10,8 @@ from naka.enquiry.application.errors import EnquiryNotFoundError, InsufficientRo
 from naka.enquiry.application.ports import RoutingCandidateContact
 from naka.enquiry.application.use_cases import (
     ExpireEnquiryWindow,
+    GetRoutedRequestByToken,
+    ListEnquiryQueue,
     ParseAndRouteEnquiry,
     RecordBusinessResponse,
     SubmitEnquiry,
@@ -240,3 +242,79 @@ class TestExpireEnquiryWindow:
 
         assert summaries == []
         assert messaging.to_customer == []
+
+
+class TestGetRoutedRequestByToken:
+    async def test_unknown_token_returns_not_found(self) -> None:
+        repo = FakeEnquiryRepository()
+        use_case = GetRoutedRequestByToken(repo, FixedClock(_NOW))
+
+        dto = await use_case.execute("does-not-exist")
+
+        assert dto.outcome == "not_found"
+
+    async def test_token_matching_no_routed_request_returns_not_found(self) -> None:
+        # Same defensive guard as RecordBusinessResponse: a repo whose
+        # get_by_token found *an* enquiry but whose routed_requests don't
+        # actually carry that token shouldn't happen, but this use case
+        # doesn't trust that either.
+        enquiry = make_routed_enquiry()
+
+        class _InconsistentRepo(FakeEnquiryRepository):
+            async def get_by_token(self, token: str) -> Enquiry | None:
+                return enquiry
+
+        use_case = GetRoutedRequestByToken(_InconsistentRepo(), FixedClock(_NOW))
+
+        dto = await use_case.execute("mismatched-token")
+
+        assert dto.outcome == "not_found"
+
+    async def test_found_token_returns_page_data(self) -> None:
+        enquiry = make_routed_enquiry()
+        repo = FakeEnquiryRepository([enquiry])
+        token = enquiry.routed_requests[0].token.value
+        use_case = GetRoutedRequestByToken(repo, FixedClock(_NOW + dt.timedelta(minutes=5)))
+
+        dto = await use_case.execute(token)
+
+        assert dto.outcome == "found"
+        assert dto.raw_text == enquiry.raw_text
+        assert dto.locality_id == enquiry.locality_id.value
+        assert dto.minutes_ago == 5
+        assert dto.is_expired is False
+        assert dto.has_responded is False
+
+    async def test_expired_token_is_flagged_but_still_found(self) -> None:
+        enquiry = make_routed_enquiry()
+        repo = FakeEnquiryRepository([enquiry])
+        token = enquiry.routed_requests[0].token.value
+        use_case = GetRoutedRequestByToken(repo, FixedClock(_NOW + dt.timedelta(hours=2)))
+
+        dto = await use_case.execute(token)
+
+        assert dto.outcome == "found"
+        assert dto.is_expired is True
+
+
+class TestListEnquiryQueue:
+    async def test_orders_most_recent_first(self) -> None:
+        older = make_received_enquiry(created_at=_NOW - dt.timedelta(hours=1))
+        newer = make_received_enquiry(created_at=_NOW)
+        repo = FakeEnquiryRepository([older, newer])
+        use_case = ListEnquiryQueue(repo, FixedClock(_NOW))
+
+        items = await use_case.execute()
+
+        assert [item.id for item in items] == [newer.id.value, older.id.value]
+
+    async def test_reports_minutes_ago_and_status(self) -> None:
+        enquiry = make_received_enquiry(created_at=_NOW - dt.timedelta(minutes=15))
+        repo = FakeEnquiryRepository([enquiry])
+        use_case = ListEnquiryQueue(repo, FixedClock(_NOW))
+
+        [item] = await use_case.execute()
+
+        assert item.minutes_ago == 15
+        assert item.status == EnquiryStatus.RECEIVED.value
+        assert item.raw_text == enquiry.raw_text

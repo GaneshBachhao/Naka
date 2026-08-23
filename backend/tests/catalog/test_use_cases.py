@@ -8,7 +8,7 @@ import pytest
 
 from naka.catalog.application.dtos import CreateBusinessRequest, DayHoursRequest
 from naka.catalog.application.errors import BusinessNotFoundError
-from naka.catalog.application.use_cases import CreateBusiness, PublishBusiness
+from naka.catalog.application.use_cases import CreateBusiness, GetBusiness, PublishBusiness
 from naka.catalog.domain.entities import PublicationState
 from naka.shared.domain.ids import BusinessId
 from tests.catalog.fakes import FakeBusinessRepository
@@ -81,3 +81,18 @@ class TestPublishBusiness:
         # publish() only accepts DRAFT/SUSPENDED, so calling it again must raise
         with pytest.raises(ValueError):
             await PublishBusiness(repo).execute(business_id)
+
+
+class TestGetBusiness:
+    async def test_returns_the_business(self) -> None:
+        repo = FakeBusinessRepository()
+        created = await CreateBusiness(repo).execute(_valid_request(name_en="Test Agro Center"))
+
+        dto = await GetBusiness(repo).execute(BusinessId(created.id))
+
+        assert dto.name_en == "Test Agro Center"
+
+    async def test_raises_when_not_found(self) -> None:
+        repo = FakeBusinessRepository()
+        with pytest.raises(BusinessNotFoundError):
+            await GetBusiness(repo).execute(BusinessId.new())

@@ -7,10 +7,12 @@ from typing import Any
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 
 from naka.enquiry.infrastructure.models import EnquiryModel
 from naka.enquiry.infrastructure.repositories import SqlAlchemyEnquiryRepository
+from naka.shared.infrastructure.messaging import OperatorQueueMessageModel
+from naka.shared.infrastructure.outbox import OutboxEventModel
 from naka.verification.infrastructure.models import VerificationRecordModel
 from naka.verification.infrastructure.repositories import SqlAlchemyVerificationRecordRepository
 from naka.worker import _on_shutdown, _on_startup, decay_verifications, expire_enquiry_windows
@@ -58,13 +60,41 @@ class TestWorkerJobs:
             await SqlAlchemyEnquiryRepository(session).add(enquiry)
             await session.commit()
 
+        # Snapshot rather than filter-by-content: ExpireEnquiryWindow's
+        # outbox payload nests enquiry_id as {"value": "<uuid>"} (asdict()
+        # recurses into EntityId's own field - see outbox.py), so matching
+        # on it is fragile. Deleting "whatever's new since this snapshot" in
+        # these two tables is robust regardless of payload shape.
+        async with worker_ctx["session_factory"]() as session:
+            existing_messages = set(
+                (await session.execute(select(OperatorQueueMessageModel.id))).scalars().all()
+            )
+            existing_outbox_events = set(
+                (await session.execute(select(OutboxEventModel.id))).scalars().all()
+            )
+
         try:
             count = await expire_enquiry_windows(worker_ctx)
             assert count == 1
         finally:
+            # ExpireEnquiryWindow also commits a customer notification (via
+            # ManualMessagingAdapter) and an EnquiryUnanswered outbox row as
+            # real side effects of this real run - not just the Enquiry
+            # itself. This fixture has no rollback net, so all three must be
+            # cleaned up or they leak into every later test run.
             async with worker_ctx["session_factory"]() as session:
                 await session.execute(
                     delete(EnquiryModel).where(EnquiryModel.id == enquiry.id.value)
+                )
+                await session.execute(
+                    delete(OperatorQueueMessageModel).where(
+                        OperatorQueueMessageModel.id.not_in(existing_messages)
+                    )
+                )
+                await session.execute(
+                    delete(OutboxEventModel).where(
+                        OutboxEventModel.id.not_in(existing_outbox_events)
+                    )
                 )
                 await session.commit()
 

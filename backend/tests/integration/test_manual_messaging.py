@@ -2,13 +2,18 @@
 from __future__ import annotations
 
 import datetime as dt
+import uuid
 
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from naka.shared.domain.phone_number import PhoneNumber
-from naka.shared.infrastructure.messaging import ManualMessagingAdapter, OperatorQueueMessageModel
+from naka.shared.infrastructure.messaging import (
+    ManualMessagingAdapter,
+    OperatorQueueMessageModel,
+    SqlAlchemyOperatorQueue,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -48,3 +53,25 @@ class TestManualMessagingAdapter:
         rows = (await db_session.execute(select(OperatorQueueMessageModel))).scalars().all()
         assert len(rows) == 1
         assert rows[0].recipient_kind == "customer"
+
+
+class TestSqlAlchemyOperatorQueue:
+    async def test_list_pending_excludes_sent_messages(self, db_session: AsyncSession) -> None:
+        messaging = ManualMessagingAdapter(db_session, _FixedClock())
+        await messaging.send_to_business(PhoneNumber("9876543210"), "pending one")
+        await messaging.send_to_business(PhoneNumber("9876543211"), "will be marked sent")
+        await db_session.flush()
+
+        queue = SqlAlchemyOperatorQueue(db_session)
+        [to_mark, _pending] = await queue.list_pending()
+        await queue.mark_sent(to_mark.id, _NOW + dt.timedelta(minutes=1))
+        await db_session.flush()
+        db_session.expunge_all()
+
+        remaining = await SqlAlchemyOperatorQueue(db_session).list_pending()
+        assert len(remaining) == 1
+        assert remaining[0].id != to_mark.id
+
+    async def test_mark_sent_on_unknown_id_is_a_no_op(self, db_session: AsyncSession) -> None:
+        queue = SqlAlchemyOperatorQueue(db_session)
+        await queue.mark_sent(uuid.uuid4(), _NOW)  # must not raise

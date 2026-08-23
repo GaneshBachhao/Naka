@@ -37,3 +37,19 @@ class RecordBusinessResponseResult(BaseModel):
 
 class ExpiredEnquirySummary(BaseModel):
     enquiry_id: uuid.UUID
+
+
+class RoutedRequestPageDTO(BaseModel):
+    outcome: Literal["found", "not_found"]
+    raw_text: str | None = None
+    locality_id: uuid.UUID | None = None
+    minutes_ago: int | None = None
+    is_expired: bool | None = None
+    has_responded: bool | None = None
+
+
+class EnquiryQueueItemDTO(BaseModel):
+    id: uuid.UUID
+    status: str
+    raw_text: str
+    minutes_ago: int

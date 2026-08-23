@@ -3,9 +3,11 @@ from __future__ import annotations
 
 from naka.enquiry.application.dtos import (
     EnquiryDTO,
+    EnquiryQueueItemDTO,
     ExpiredEnquirySummary,
     RecordBusinessResponseRequest,
     RecordBusinessResponseResult,
+    RoutedRequestPageDTO,
     SubmitEnquiryRequest,
 )
 from naka.enquiry.application.errors import EnquiryNotFoundError, InsufficientRoutingCandidatesError
@@ -188,3 +190,54 @@ class ExpireEnquiryWindow:
             )
             expired.append(ExpiredEnquirySummary(enquiry_id=updated.id.value))
         return expired
+
+
+class GetRoutedRequestByToken:
+    """Backs GET /r/{token} - the dealer response page's data source. Not
+    found and expired-but-real-token are both normal outcomes here (T7's
+    design note: an expired or used token gets its own clear state, not an
+    error page), so this returns a DTO rather than raising."""
+
+    def __init__(self, enquiries: EnquiryRepository, clock: Clock) -> None:
+        self._enquiries = enquiries
+        self._clock = clock
+
+    async def execute(self, token: str) -> RoutedRequestPageDTO:
+        enquiry = await self._enquiries.get_by_token(token)
+        if enquiry is None:
+            return RoutedRequestPageDTO(outcome="not_found")
+
+        matching = next(
+            (routed for routed in enquiry.routed_requests if routed.token.value == token), None
+        )
+        if matching is None:
+            return RoutedRequestPageDTO(outcome="not_found")
+
+        now = self._clock.now()
+        minutes_ago = int((now - enquiry.created_at).total_seconds() // 60)
+        return RoutedRequestPageDTO(
+            outcome="found",
+            raw_text=enquiry.raw_text,
+            locality_id=enquiry.locality_id.value if enquiry.locality_id else None,
+            minutes_ago=minutes_ago,
+            is_expired=matching.is_expired_at(now),
+            has_responded=matching.has_responded,
+        )
+
+
+class ListEnquiryQueue:
+    def __init__(self, enquiries: EnquiryRepository, clock: Clock) -> None:
+        self._enquiries = enquiries
+        self._clock = clock
+
+    async def execute(self, limit: int = 100) -> list[EnquiryQueueItemDTO]:
+        now = self._clock.now()
+        return [
+            EnquiryQueueItemDTO(
+                id=enquiry.id.value,
+                status=enquiry.status.value,
+                raw_text=enquiry.raw_text,
+                minutes_ago=int((now - enquiry.created_at).total_seconds() // 60),
+            )
+            for enquiry in await self._enquiries.list_recent(limit)
+        ]
