@@ -64,5 +64,8 @@ jobs:
       - name: import-linter
         run: uv run lint-imports
 
+      - name: migrate
+        run: uv run alembic upgrade head
+
       - name: pytest
         run: uv run pytest

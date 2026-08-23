@@ -1,6 +1,6 @@
 # Makefile
 
-.PHONY: up down test lint migrate
+.PHONY: up down test lint migrate worker
 
 up:
 	docker compose up -d
@@ -16,3 +16,6 @@ lint:
 
 migrate:
 	cd backend && uv run alembic upgrade head
+
+worker:
+	cd backend && uv run arq naka.worker.WorkerSettings

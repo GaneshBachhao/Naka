@@ -43,6 +43,7 @@ packages = ["src/naka"]
 [tool.black]
 line-length = 100
 target-version = ["py313"]
+extend-exclude = "alembic/versions"
 
 # ---------------------------------------------------------------------------
 # ruff
@@ -51,6 +52,7 @@ target-version = ["py313"]
 line-length = 100
 target-version = "py313"
 src = ["src"]
+extend-exclude = ["alembic/versions"]
 
 [tool.ruff.lint]
 select = [
@@ -84,6 +86,7 @@ select = [
 "**/api/**" = ["TID251"]
 "tests/**" = ["TID251"]
 "src/naka/main.py" = ["TID251"]
+"alembic/**" = ["TID251"]
 
 # ---------------------------------------------------------------------------
 # import-linter — bounded-context and layer boundaries
@@ -196,6 +199,7 @@ disallow_untyped_defs = false
 asyncio_mode = "auto"
 testpaths = ["tests"]
 addopts = "--cov=naka --cov-report=term-missing"
+markers = ["integration: requires a live Postgres (see docker-compose.yml)"]
 
 [tool.coverage.report]
 exclude_also = [
