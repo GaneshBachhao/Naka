@@ -29,6 +29,20 @@ class AIClientPort(Protocol):
     async def parse_enquiry_intent(self, raw_text: str, region_id: RegionId) -> ParsedIntent: ...
 
 
+class LocalityLookupPort(Protocol):
+    """The dealer response page (GET /r/{token}) needs to show which
+    village the customer is in, but Enquiry only stores locality_id -
+    resolving it to a display name means reaching into catalog, which
+    enquiry's domain can't do itself. Returns just the name, not catalog's
+    Locality entity - CLAUDE.md's "never import another context's domain
+    objects" applies at the application layer too, not only inside
+    domain/; the implementing adapter (enquiry/infrastructure) is where
+    catalog.domain.Locality is allowed to appear, since only Infrastructure
+    is exempt from context isolation."""
+
+    async def get_name(self, locality_id: LocalityId) -> str | None: ...
+
+
 @dataclass(frozen=True)
 class RoutingCandidateContact:
     """A RoutingCandidate carries only the ranking signals - it's a pure

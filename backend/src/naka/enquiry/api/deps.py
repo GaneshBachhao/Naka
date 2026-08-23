@@ -16,6 +16,7 @@ from naka.enquiry.application.use_cases import (
     SubmitEnquiry,
 )
 from naka.enquiry.infrastructure.ai_adapter import AnthropicAIAdapter
+from naka.enquiry.infrastructure.locality_lookup import SqlLocalityNameLookup
 from naka.enquiry.infrastructure.repositories import SqlAlchemyEnquiryRepository
 from naka.enquiry.infrastructure.routing_lookup import SqlRoutingCandidateLookupPort
 from naka.shared.api.deps import get_clock, get_session, get_settings
@@ -58,6 +59,12 @@ def get_routing_candidates(
     return SqlRoutingCandidateLookupPort(session, clock)
 
 
+def get_locality_name_lookup(
+    session: AsyncSession = Depends(get_session),
+) -> SqlLocalityNameLookup:
+    return SqlLocalityNameLookup(session)
+
+
 def get_submit_enquiry_use_case(
     enquiries: SqlAlchemyEnquiryRepository = Depends(get_enquiry_repository),
     outbox: SqlAlchemyOutbox = Depends(get_outbox),
@@ -97,9 +104,10 @@ def get_record_business_response_use_case(
 
 def get_routed_request_by_token_use_case(
     enquiries: SqlAlchemyEnquiryRepository = Depends(get_enquiry_repository),
+    localities: SqlLocalityNameLookup = Depends(get_locality_name_lookup),
     clock: SystemClock = Depends(get_clock),
 ) -> GetRoutedRequestByToken:
-    return GetRoutedRequestByToken(enquiries, clock)
+    return GetRoutedRequestByToken(enquiries, localities, clock)
 
 
 def get_enquiry_queue_use_case(

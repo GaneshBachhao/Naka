@@ -40,6 +40,14 @@ class FakeEnquiryRepository:
         return ordered[:limit]
 
 
+class FakeLocalityLookupPort:
+    def __init__(self, names: dict[LocalityId, str] | None = None) -> None:
+        self.names = names or {}
+
+    async def get_name(self, locality_id: LocalityId) -> str | None:
+        return self.names.get(locality_id)
+
+
 class FakeAIClientPort:
     def __init__(self, intent: ParsedIntent) -> None:
         self.intent = intent

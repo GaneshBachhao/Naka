@@ -14,6 +14,7 @@ from naka.enquiry.application.errors import EnquiryNotFoundError, InsufficientRo
 from naka.enquiry.application.ports import (
     AIClientPort,
     EnquiryRepository,
+    LocalityLookupPort,
     RoutingCandidateLookupPort,
 )
 from naka.enquiry.domain.entities import BusinessResponse, Enquiry
@@ -198,8 +199,11 @@ class GetRoutedRequestByToken:
     design note: an expired or used token gets its own clear state, not an
     error page), so this returns a DTO rather than raising."""
 
-    def __init__(self, enquiries: EnquiryRepository, clock: Clock) -> None:
+    def __init__(
+        self, enquiries: EnquiryRepository, localities: LocalityLookupPort, clock: Clock
+    ) -> None:
         self._enquiries = enquiries
+        self._localities = localities
         self._clock = clock
 
     async def execute(self, token: str) -> RoutedRequestPageDTO:
@@ -213,12 +217,17 @@ class GetRoutedRequestByToken:
         if matching is None:
             return RoutedRequestPageDTO(outcome="not_found")
 
+        locality_name = None
+        if enquiry.locality_id is not None:
+            locality_name = await self._localities.get_name(enquiry.locality_id)
+
         now = self._clock.now()
         minutes_ago = int((now - enquiry.created_at).total_seconds() // 60)
         return RoutedRequestPageDTO(
             outcome="found",
             raw_text=enquiry.raw_text,
             locality_id=enquiry.locality_id.value if enquiry.locality_id else None,
+            locality_name=locality_name,
             minutes_ago=minutes_ago,
             is_expired=matching.is_expired_at(now),
             has_responded=matching.has_responded,

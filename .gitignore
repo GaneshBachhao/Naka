@@ -2,6 +2,8 @@
 
 # env
 .env
+.env.local
+frontend/.env*.local
 
 # backend (Python / uv)
 backend/.venv/

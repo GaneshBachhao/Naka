@@ -19,10 +19,12 @@ from naka.enquiry.application.use_cases import (
 from naka.enquiry.domain.entities import Enquiry
 from naka.enquiry.domain.value_objects import EnquiryStatus, ParsedIntent
 from naka.shared.domain.ids import BusinessId, EnquiryId
+from tests.catalog.factories import make_locality
 from tests.enquiry.factories import make_parsed_intent, make_received_enquiry, make_routed_enquiry
 from tests.enquiry.fakes import (
     FakeAIClientPort,
     FakeEnquiryRepository,
+    FakeLocalityLookupPort,
     FakeMessaging,
     FakeOutbox,
     FakeRoutingCandidateLookupPort,
@@ -247,7 +249,7 @@ class TestExpireEnquiryWindow:
 class TestGetRoutedRequestByToken:
     async def test_unknown_token_returns_not_found(self) -> None:
         repo = FakeEnquiryRepository()
-        use_case = GetRoutedRequestByToken(repo, FixedClock(_NOW))
+        use_case = GetRoutedRequestByToken(repo, FakeLocalityLookupPort(), FixedClock(_NOW))
 
         dto = await use_case.execute("does-not-exist")
 
@@ -264,32 +266,52 @@ class TestGetRoutedRequestByToken:
             async def get_by_token(self, token: str) -> Enquiry | None:
                 return enquiry
 
-        use_case = GetRoutedRequestByToken(_InconsistentRepo(), FixedClock(_NOW))
+        use_case = GetRoutedRequestByToken(
+            _InconsistentRepo(), FakeLocalityLookupPort(), FixedClock(_NOW)
+        )
 
         dto = await use_case.execute("mismatched-token")
 
         assert dto.outcome == "not_found"
 
-    async def test_found_token_returns_page_data(self) -> None:
+    async def test_found_token_returns_page_data_with_locality_name(self) -> None:
         enquiry = make_routed_enquiry()
         repo = FakeEnquiryRepository([enquiry])
         token = enquiry.routed_requests[0].token.value
-        use_case = GetRoutedRequestByToken(repo, FixedClock(_NOW + dt.timedelta(minutes=5)))
+        locality = make_locality(id=enquiry.locality_id, name_mr="पिंपळनेर")
+        localities = FakeLocalityLookupPort({locality.id: locality.name_mr})
+        use_case = GetRoutedRequestByToken(
+            repo, localities, FixedClock(_NOW + dt.timedelta(minutes=5))
+        )
 
         dto = await use_case.execute(token)
 
         assert dto.outcome == "found"
         assert dto.raw_text == enquiry.raw_text
         assert dto.locality_id == enquiry.locality_id.value
+        assert dto.locality_name == "पिंपळनेर"
         assert dto.minutes_ago == 5
         assert dto.is_expired is False
         assert dto.has_responded is False
+
+    async def test_unknown_locality_leaves_locality_name_none(self) -> None:
+        enquiry = make_routed_enquiry()
+        repo = FakeEnquiryRepository([enquiry])
+        token = enquiry.routed_requests[0].token.value
+        use_case = GetRoutedRequestByToken(repo, FakeLocalityLookupPort(), FixedClock(_NOW))
+
+        dto = await use_case.execute(token)
+
+        assert dto.outcome == "found"
+        assert dto.locality_name is None
 
     async def test_expired_token_is_flagged_but_still_found(self) -> None:
         enquiry = make_routed_enquiry()
         repo = FakeEnquiryRepository([enquiry])
         token = enquiry.routed_requests[0].token.value
-        use_case = GetRoutedRequestByToken(repo, FixedClock(_NOW + dt.timedelta(hours=2)))
+        use_case = GetRoutedRequestByToken(
+            repo, FakeLocalityLookupPort(), FixedClock(_NOW + dt.timedelta(hours=2))
+        )
 
         dto = await use_case.execute(token)
 
