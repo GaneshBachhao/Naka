@@ -1,7 +1,11 @@
 # backend/tests/enquiry/test_services.py
 from __future__ import annotations
 
-from naka.enquiry.domain.services import RoutingCandidate, select_businesses_for_routing
+from naka.enquiry.domain.services import (
+    RoutingCandidate,
+    rank_routing_candidates,
+    select_businesses_for_routing,
+)
 from naka.shared.domain.ids import BusinessId
 
 
@@ -80,3 +84,21 @@ def test_full_precedence_order() -> None:
         closer_but_less_responsive.business_id,
         farther.business_id,
     )
+
+
+def test_rank_routing_candidates_returns_every_matching_candidate_uncapped() -> None:
+    candidates = [_candidate(distance_km=float(i)) for i in range(8)]
+
+    ranked = rank_routing_candidates(candidates)
+
+    assert len(ranked) == 8
+    assert [c.business_id for c in ranked] == [c.business_id for c in candidates]
+
+
+def test_rank_routing_candidates_excludes_non_matching_category() -> None:
+    matching = _candidate(category_matches=True)
+    non_matching = _candidate(category_matches=False)
+
+    ranked = rank_routing_candidates([matching, non_matching])
+
+    assert ranked == (matching,)

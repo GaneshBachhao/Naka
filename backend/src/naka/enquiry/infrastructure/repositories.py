@@ -1,6 +1,8 @@
 # backend/src/naka/enquiry/infrastructure/repositories.py
 from __future__ import annotations
 
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,5 +44,10 @@ class SqlAlchemyEnquiryRepository:
 
     async def list_recent(self, limit: int = 100) -> list[Enquiry]:
         stmt = select(EnquiryModel).order_by(EnquiryModel.created_at.desc()).limit(limit)
+        result = await self._session.execute(stmt)
+        return [enquiry_to_domain(model) for model in result.scalars().all()]
+
+    async def list_since(self, cutoff: datetime) -> list[Enquiry]:
+        stmt = select(EnquiryModel).where(EnquiryModel.created_at >= cutoff)
         result = await self._session.execute(stmt)
         return [enquiry_to_domain(model) for model in result.scalars().all()]

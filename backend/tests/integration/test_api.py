@@ -117,6 +117,10 @@ class TestCreateBusinessEndToEnd:
                 fetched = client.get(f"/ops/businesses/{business_id}", headers=_ops_headers())
                 assert fetched.status_code == 200
                 assert fetched.json()["name_en"] == "Sai Krushi Kendra"
+
+                listed = client.get("/ops/businesses", headers=_ops_headers())
+                assert listed.status_code == 200
+                assert business_id in {uuid.UUID(b["id"]) for b in listed.json()}
             finally:
                 await _delete(BusinessModel, business_id)
 

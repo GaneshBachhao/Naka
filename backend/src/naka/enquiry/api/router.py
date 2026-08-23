@@ -6,35 +6,52 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from naka.enquiry.api.deps import (
+    get_daily_counters_use_case,
+    get_enquiry_detail_use_case,
     get_enquiry_queue_use_case,
     get_list_operator_queue_use_case,
     get_mark_operator_message_sent_use_case,
-    get_parse_and_route_enquiry_use_case,
+    get_parse_enquiry_use_case,
     get_record_business_response_use_case,
+    get_route_enquiry_use_case,
     get_routed_request_by_token_use_case,
     get_submit_enquiry_use_case,
+    get_suggest_routing_candidates_use_case,
 )
 from naka.enquiry.api.schemas import OperatorQueueMessageSchema, RecordResponseBody
 from naka.enquiry.application.dtos import (
+    DailyCountersDTO,
+    EnquiryDetailDTO,
     EnquiryDTO,
     EnquiryQueueItemDTO,
     RecordBusinessResponseRequest,
     RecordBusinessResponseResult,
     RoutedRequestPageDTO,
+    RouteEnquiryRequest,
+    RouteEnquiryResult,
+    RoutingSuggestionDTO,
     SubmitEnquiryRequest,
 )
-from naka.enquiry.application.errors import EnquiryNotFoundError, InsufficientRoutingCandidatesError
+from naka.enquiry.application.errors import (
+    EnquiryNotFoundError,
+    InsufficientRoutingCandidatesError,
+    InvalidRoutingSelectionError,
+)
 from naka.enquiry.application.use_cases import (
+    GetDailyCounters,
+    GetEnquiryDetail,
     GetRoutedRequestByToken,
     ListEnquiryQueue,
-    ParseAndRouteEnquiry,
+    ParseEnquiry,
     RecordBusinessResponse,
+    RouteEnquiry,
     SubmitEnquiry,
+    SuggestRoutingCandidates,
 )
 from naka.shared.api.deps import require_ops_auth
 from naka.shared.api.rate_limit import rate_limit
 from naka.shared.application.use_cases import ListOperatorQueue, MarkOperatorMessageSent
-from naka.shared.domain.ids import EnquiryId
+from naka.shared.domain.ids import BusinessId, EnquiryId
 
 _submit_rate_limit = rate_limit(limit=10, window_seconds=60)
 _response_page_rate_limit = rate_limit(limit=30, window_seconds=60)
@@ -99,23 +116,89 @@ async def list_enquiry_queue(
     return await use_case.execute()
 
 
-@ops_router.post(
-    "/enquiries/{enquiry_id}/route",
-    response_model=EnquiryDTO,
-    summary="Parse an enquiry's intent and route it to eligible businesses",
+@ops_router.get(
+    "/enquiries/{enquiry_id}",
+    response_model=EnquiryDetailDTO,
+    summary="One enquiry's full detail: parsed intent, routed requests, responses so far",
 )
-async def route_enquiry(
+async def get_enquiry_detail(
     enquiry_id: uuid.UUID,
-    use_case: ParseAndRouteEnquiry = Depends(get_parse_and_route_enquiry_use_case),
+    use_case: GetEnquiryDetail = Depends(get_enquiry_detail_use_case),
+) -> EnquiryDetailDTO:
+    try:
+        return await use_case.execute(EnquiryId(enquiry_id))
+    except EnquiryNotFoundError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Enquiry not found") from exc
+
+
+@ops_router.post(
+    "/enquiries/{enquiry_id}/parse",
+    response_model=EnquiryDTO,
+    summary="Parse an enquiry's intent (category, locality, urgency)",
+)
+async def parse_enquiry(
+    enquiry_id: uuid.UUID,
+    use_case: ParseEnquiry = Depends(get_parse_enquiry_use_case),
 ) -> EnquiryDTO:
     try:
         return await use_case.execute(EnquiryId(enquiry_id))
     except EnquiryNotFoundError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Enquiry not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+
+
+@ops_router.get(
+    "/enquiries/{enquiry_id}/candidates",
+    response_model=list[RoutingSuggestionDTO],
+    summary="Ranked, eligible businesses to route a parsed enquiry to, with the reason for each",
+)
+async def suggest_routing_candidates(
+    enquiry_id: uuid.UUID,
+    use_case: SuggestRoutingCandidates = Depends(get_suggest_routing_candidates_use_case),
+) -> list[RoutingSuggestionDTO]:
+    try:
+        return await use_case.execute(EnquiryId(enquiry_id))
+    except EnquiryNotFoundError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Enquiry not found") from exc
+
+
+@ops_router.post(
+    "/enquiries/{enquiry_id}/route",
+    response_model=RouteEnquiryResult,
+    summary="Route to the chosen businesses; returns the exact WhatsApp message for each",
+)
+async def route_enquiry(
+    enquiry_id: uuid.UUID,
+    body: RouteEnquiryRequest,
+    use_case: RouteEnquiry = Depends(get_route_enquiry_use_case),
+) -> RouteEnquiryResult:
+    try:
+        business_ids = [BusinessId(b) for b in body.business_ids]
+        return await use_case.execute(EnquiryId(enquiry_id), business_ids)
+    except EnquiryNotFoundError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Enquiry not found") from exc
     except InsufficientRoutingCandidatesError as exc:
         raise HTTPException(
-            status.HTTP_409_CONFLICT, "Not enough eligible businesses to route to"
+            status.HTTP_409_CONFLICT, "Enquiry has no parsed category or locality yet"
         ) from exc
+    except InvalidRoutingSelectionError as exc:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "One or more selected businesses are not eligible candidates"
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+
+
+@ops_router.get(
+    "/counters/daily",
+    response_model=DailyCountersDTO,
+    summary="Today's enquiry count, answer rate, and median time-to-answer",
+)
+async def get_daily_counters(
+    use_case: GetDailyCounters = Depends(get_daily_counters_use_case),
+) -> DailyCountersDTO:
+    return await use_case.execute()
 
 
 @ops_router.get(

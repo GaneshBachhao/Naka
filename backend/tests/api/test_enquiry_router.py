@@ -8,21 +8,34 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from naka.enquiry.api.deps import (
+    get_daily_counters_use_case,
+    get_enquiry_detail_use_case,
     get_enquiry_queue_use_case,
     get_list_operator_queue_use_case,
     get_mark_operator_message_sent_use_case,
-    get_parse_and_route_enquiry_use_case,
+    get_parse_enquiry_use_case,
     get_record_business_response_use_case,
+    get_route_enquiry_use_case,
     get_routed_request_by_token_use_case,
     get_submit_enquiry_use_case,
+    get_suggest_routing_candidates_use_case,
 )
 from naka.enquiry.application.dtos import (
+    DailyCountersDTO,
+    EnquiryDetailDTO,
     EnquiryDTO,
     EnquiryQueueItemDTO,
     RecordBusinessResponseResult,
+    RoutedMessageDTO,
     RoutedRequestPageDTO,
+    RouteEnquiryResult,
+    RoutingSuggestionDTO,
 )
-from naka.enquiry.application.errors import EnquiryNotFoundError, InsufficientRoutingCandidatesError
+from naka.enquiry.application.errors import (
+    EnquiryNotFoundError,
+    InsufficientRoutingCandidatesError,
+    InvalidRoutingSelectionError,
+)
 from naka.shared.application.ports import OperatorQueueMessage
 from tests.api.conftest import ops_headers
 from tests.api.fakes import StubUseCase
@@ -141,35 +154,174 @@ class TestOpsAuthRequired:
         assert len(response.json()) == 1
 
 
-class TestRouteEnquiry:
-    def test_returns_the_routed_enquiry(self, app: FastAPI, client: TestClient) -> None:
-        dto = EnquiryDTO(id=uuid.uuid4(), status="routed")
-        app.dependency_overrides[get_parse_and_route_enquiry_use_case] = lambda: StubUseCase(
-            result=dto
+class TestGetEnquiryDetail:
+    def test_returns_the_detail(self, app: FastAPI, client: TestClient) -> None:
+        dto = EnquiryDetailDTO(
+            id=uuid.uuid4(),
+            status="routed",
+            raw_text="text",
+            region_id=uuid.uuid4(),
+            created_at=dt.datetime(2026, 6, 1, tzinfo=dt.UTC),
+            minutes_ago=3,
         )
+        app.dependency_overrides[get_enquiry_detail_use_case] = lambda: StubUseCase(result=dto)
 
-        response = client.post(f"/ops/enquiries/{uuid.uuid4()}/route", headers=ops_headers())
+        response = client.get(f"/ops/enquiries/{uuid.uuid4()}", headers=ops_headers())
 
         assert response.status_code == 200
         assert response.json()["status"] == "routed"
 
     def test_maps_not_found_to_404(self, app: FastAPI, client: TestClient) -> None:
-        app.dependency_overrides[get_parse_and_route_enquiry_use_case] = lambda: StubUseCase(
+        app.dependency_overrides[get_enquiry_detail_use_case] = lambda: StubUseCase(
             exception=EnquiryNotFoundError(uuid.uuid4())
         )
 
-        response = client.post(f"/ops/enquiries/{uuid.uuid4()}/route", headers=ops_headers())
+        response = client.get(f"/ops/enquiries/{uuid.uuid4()}", headers=ops_headers())
+
+        assert response.status_code == 404
+
+
+class TestParseEnquiry:
+    def test_returns_the_parsed_enquiry(self, app: FastAPI, client: TestClient) -> None:
+        dto = EnquiryDTO(id=uuid.uuid4(), status="parsed")
+        app.dependency_overrides[get_parse_enquiry_use_case] = lambda: StubUseCase(result=dto)
+
+        response = client.post(f"/ops/enquiries/{uuid.uuid4()}/parse", headers=ops_headers())
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "parsed"
+
+    def test_maps_not_found_to_404(self, app: FastAPI, client: TestClient) -> None:
+        app.dependency_overrides[get_parse_enquiry_use_case] = lambda: StubUseCase(
+            exception=EnquiryNotFoundError(uuid.uuid4())
+        )
+
+        response = client.post(f"/ops/enquiries/{uuid.uuid4()}/parse", headers=ops_headers())
+
+        assert response.status_code == 404
+
+
+class TestSuggestRoutingCandidates:
+    def test_returns_ranked_suggestions(self, app: FastAPI, client: TestClient) -> None:
+        suggestion = RoutingSuggestionDTO(
+            business_id=uuid.uuid4(),
+            distance_km=1.2,
+            response_rate=0.8,
+            verification_recency_days=5,
+            reason="1.2 km away, 80% response rate, verified 5d ago",
+            default_selected=True,
+        )
+        app.dependency_overrides[get_suggest_routing_candidates_use_case] = lambda: StubUseCase(
+            result=[suggestion]
+        )
+
+        response = client.get(f"/ops/enquiries/{uuid.uuid4()}/candidates", headers=ops_headers())
+
+        assert response.status_code == 200
+        assert response.json()[0]["default_selected"] is True
+
+    def test_maps_not_found_to_404(self, app: FastAPI, client: TestClient) -> None:
+        app.dependency_overrides[get_suggest_routing_candidates_use_case] = lambda: StubUseCase(
+            exception=EnquiryNotFoundError(uuid.uuid4())
+        )
+
+        response = client.get(f"/ops/enquiries/{uuid.uuid4()}/candidates", headers=ops_headers())
+
+        assert response.status_code == 404
+
+
+class TestRouteEnquiry:
+    def test_returns_the_routed_enquiry_and_messages(
+        self, app: FastAPI, client: TestClient
+    ) -> None:
+        business_id = uuid.uuid4()
+        result = RouteEnquiryResult(
+            enquiry=EnquiryDTO(id=uuid.uuid4(), status="routed"),
+            messages=[
+                RoutedMessageDTO(business_id=business_id, phone_number="9876543210", message="hi")
+            ],
+        )
+        app.dependency_overrides[get_route_enquiry_use_case] = lambda: StubUseCase(result=result)
+
+        response = client.post(
+            f"/ops/enquiries/{uuid.uuid4()}/route",
+            json={"business_ids": [str(business_id)]},
+            headers=ops_headers(),
+        )
+
+        assert response.status_code == 200
+        assert response.json()["enquiry"]["status"] == "routed"
+        assert response.json()["messages"][0]["message"] == "hi"
+
+    def test_maps_not_found_to_404(self, app: FastAPI, client: TestClient) -> None:
+        app.dependency_overrides[get_route_enquiry_use_case] = lambda: StubUseCase(
+            exception=EnquiryNotFoundError(uuid.uuid4())
+        )
+
+        response = client.post(
+            f"/ops/enquiries/{uuid.uuid4()}/route",
+            json={"business_ids": [str(uuid.uuid4())] * 3},
+            headers=ops_headers(),
+        )
 
         assert response.status_code == 404
 
     def test_maps_insufficient_candidates_to_409(self, app: FastAPI, client: TestClient) -> None:
-        app.dependency_overrides[get_parse_and_route_enquiry_use_case] = lambda: StubUseCase(
+        app.dependency_overrides[get_route_enquiry_use_case] = lambda: StubUseCase(
             exception=InsufficientRoutingCandidatesError(uuid.uuid4())
         )
 
-        response = client.post(f"/ops/enquiries/{uuid.uuid4()}/route", headers=ops_headers())
+        response = client.post(
+            f"/ops/enquiries/{uuid.uuid4()}/route",
+            json={"business_ids": [str(uuid.uuid4())] * 3},
+            headers=ops_headers(),
+        )
 
         assert response.status_code == 409
+
+    def test_maps_invalid_selection_to_409(self, app: FastAPI, client: TestClient) -> None:
+        app.dependency_overrides[get_route_enquiry_use_case] = lambda: StubUseCase(
+            exception=InvalidRoutingSelectionError(uuid.uuid4())
+        )
+
+        response = client.post(
+            f"/ops/enquiries/{uuid.uuid4()}/route",
+            json={"business_ids": [str(uuid.uuid4())] * 3},
+            headers=ops_headers(),
+        )
+
+        assert response.status_code == 409
+
+    def test_maps_domain_value_error_to_409(self, app: FastAPI, client: TestClient) -> None:
+        app.dependency_overrides[get_route_enquiry_use_case] = lambda: StubUseCase(
+            exception=ValueError("fan-out must route to between 3 and 5 businesses")
+        )
+
+        response = client.post(
+            f"/ops/enquiries/{uuid.uuid4()}/route",
+            json={"business_ids": [str(uuid.uuid4())] * 2},
+            headers=ops_headers(),
+        )
+
+        assert response.status_code == 409
+
+
+class TestGetDailyCounters:
+    def test_returns_the_counters(self, app: FastAPI, client: TestClient) -> None:
+        dto = DailyCountersDTO(
+            total_enquiries=10, answered=6, answer_rate=0.6, median_response_seconds=420
+        )
+        app.dependency_overrides[get_daily_counters_use_case] = lambda: StubUseCase(result=dto)
+
+        response = client.get("/ops/counters/daily", headers=ops_headers())
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "total_enquiries": 10,
+            "answered": 6,
+            "answer_rate": 0.6,
+            "median_response_seconds": 420,
+        }
 
 
 class TestOperatorQueue:

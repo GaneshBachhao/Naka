@@ -23,10 +23,19 @@ class RoutingCandidate:
     verification_recency_days: int
 
 
-def select_businesses_for_routing(candidates: Iterable[RoutingCandidate]) -> tuple[BusinessId, ...]:
+def _ranking_key(candidate: RoutingCandidate) -> tuple[float, float, int]:
+    return (candidate.distance_km, -candidate.response_rate, candidate.verification_recency_days)
+
+
+def rank_routing_candidates(candidates: Iterable[RoutingCandidate]) -> tuple[RoutingCandidate, ...]:
+    """Full ranked list, uncapped - the ops console's suggestion view needs
+    every eligible candidate (so an operator can swap a default pick for an
+    alternate), not just the fan-out this select_businesses_for_routing()
+    below will actually route to."""
     matching = [c for c in candidates if c.category_matches]
-    ranked = sorted(
-        matching,
-        key=lambda c: (c.distance_km, -c.response_rate, c.verification_recency_days),
-    )
+    return tuple(sorted(matching, key=_ranking_key))
+
+
+def select_businesses_for_routing(candidates: Iterable[RoutingCandidate]) -> tuple[BusinessId, ...]:
+    ranked = rank_routing_candidates(candidates)
     return tuple(c.business_id for c in ranked[:_MAX_FANOUT])

@@ -72,6 +72,19 @@ class TestSqlAlchemyBusinessRepository:
         assert loaded is not None
         assert loaded.opening_hours == business.opening_hours
 
+    async def test_list_all_returns_every_business(self, db_session: AsyncSession) -> None:
+        repo = SqlAlchemyBusinessRepository(db_session)
+        first = make_business()
+        second = make_business()
+
+        await repo.add(first)
+        await repo.add(second)
+        await db_session.flush()
+        db_session.expunge_all()
+
+        results = await repo.list_all()
+        assert {b.id for b in results} == {first.id, second.id}
+
 
 class TestSqlAlchemyRegionRepository:
     async def test_get_returns_none_when_missing(self, db_session: AsyncSession) -> None:

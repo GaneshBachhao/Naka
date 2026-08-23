@@ -9,11 +9,15 @@ from naka.catalog.infrastructure.repositories import (
     SqlAlchemyLocalityRepository,
 )
 from naka.enquiry.application.use_cases import (
+    GetDailyCounters,
+    GetEnquiryDetail,
     GetRoutedRequestByToken,
     ListEnquiryQueue,
-    ParseAndRouteEnquiry,
+    ParseEnquiry,
     RecordBusinessResponse,
+    RouteEnquiry,
     SubmitEnquiry,
+    SuggestRoutingCandidates,
 )
 from naka.enquiry.infrastructure.ai_adapter import AnthropicAIAdapter
 from naka.enquiry.infrastructure.locality_lookup import SqlLocalityNameLookup
@@ -73,24 +77,47 @@ def get_submit_enquiry_use_case(
     return SubmitEnquiry(enquiries, outbox, clock)
 
 
-def get_parse_and_route_enquiry_use_case(
+def get_parse_enquiry_use_case(
     enquiries: SqlAlchemyEnquiryRepository = Depends(get_enquiry_repository),
     ai_client: AnthropicAIAdapter = Depends(get_ai_client),
+    outbox: SqlAlchemyOutbox = Depends(get_outbox),
+    clock: SystemClock = Depends(get_clock),
+) -> ParseEnquiry:
+    return ParseEnquiry(enquiries, ai_client, outbox, clock)
+
+
+def get_suggest_routing_candidates_use_case(
+    enquiries: SqlAlchemyEnquiryRepository = Depends(get_enquiry_repository),
+    candidates: SqlRoutingCandidateLookupPort = Depends(get_routing_candidates),
+) -> SuggestRoutingCandidates:
+    return SuggestRoutingCandidates(enquiries, candidates)
+
+
+def get_route_enquiry_use_case(
+    enquiries: SqlAlchemyEnquiryRepository = Depends(get_enquiry_repository),
     candidates: SqlRoutingCandidateLookupPort = Depends(get_routing_candidates),
     messaging: ManualMessagingAdapter = Depends(get_messaging),
     outbox: SqlAlchemyOutbox = Depends(get_outbox),
     clock: SystemClock = Depends(get_clock),
     settings: Settings = Depends(get_settings),
-) -> ParseAndRouteEnquiry:
-    return ParseAndRouteEnquiry(
-        enquiries,
-        ai_client,
-        candidates,
-        messaging,
-        outbox,
-        clock,
-        settings.response_link_base_url,
+) -> RouteEnquiry:
+    return RouteEnquiry(
+        enquiries, candidates, messaging, outbox, clock, settings.response_link_base_url
     )
+
+
+def get_enquiry_detail_use_case(
+    enquiries: SqlAlchemyEnquiryRepository = Depends(get_enquiry_repository),
+    clock: SystemClock = Depends(get_clock),
+) -> GetEnquiryDetail:
+    return GetEnquiryDetail(enquiries, clock)
+
+
+def get_daily_counters_use_case(
+    enquiries: SqlAlchemyEnquiryRepository = Depends(get_enquiry_repository),
+    clock: SystemClock = Depends(get_clock),
+) -> GetDailyCounters:
+    return GetDailyCounters(enquiries, clock)
 
 
 def get_record_business_response_use_case(

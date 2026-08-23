@@ -10,9 +10,13 @@ from fastapi.testclient import TestClient
 from naka.catalog.api.deps import (
     get_create_business_use_case,
     get_get_business_use_case,
+    get_list_businesses_use_case,
+    get_list_categories_use_case,
+    get_list_localities_use_case,
     get_publish_business_use_case,
+    get_update_business_use_case,
 )
-from naka.catalog.application.dtos import BusinessDTO
+from naka.catalog.application.dtos import BusinessDTO, CategoryDTO, LocalityDTO
 from naka.catalog.application.errors import BusinessNotFoundError
 from tests.api.conftest import ops_headers
 from tests.api.fakes import StubUseCase
@@ -32,6 +36,8 @@ def _dto(**overrides: object) -> BusinessDTO:
         landmark="Bus stand road",
         latitude=21.15,
         longitude=74.33,
+        opening_hours={},
+        attributes=[],
         publication_state="draft",
     )
     defaults.update(overrides)
@@ -56,6 +62,12 @@ def _valid_create_body() -> dict[str, object]:
         "opening_hours": {str(i): trading_hours for i in range(6)} | {"6": closed},
         "attributes": [],
     }
+
+
+def _valid_update_body() -> dict[str, object]:
+    body = _valid_create_body()
+    del body["region_id"]
+    return body
 
 
 class TestOpsAuthRequired:
@@ -123,3 +135,78 @@ class TestPublishBusiness:
         response = client.post(f"/ops/businesses/{uuid.uuid4()}/publish", headers=ops_headers())
 
         assert response.status_code == 409
+
+
+class TestUpdateBusiness:
+    def test_returns_the_updated_business(self, app: FastAPI, client: TestClient) -> None:
+        dto = _dto(name_en="New Name")
+        app.dependency_overrides[get_update_business_use_case] = lambda: StubUseCase(result=dto)
+
+        response = client.put(
+            f"/ops/businesses/{dto.id}", json=_valid_update_body(), headers=ops_headers()
+        )
+
+        assert response.status_code == 200
+        assert response.json()["name_en"] == "New Name"
+
+    def test_maps_not_found_to_404(self, app: FastAPI, client: TestClient) -> None:
+        app.dependency_overrides[get_update_business_use_case] = lambda: StubUseCase(
+            exception=BusinessNotFoundError(uuid.uuid4())
+        )
+
+        response = client.put(
+            f"/ops/businesses/{uuid.uuid4()}", json=_valid_update_body(), headers=ops_headers()
+        )
+
+        assert response.status_code == 404
+
+
+class TestListBusinesses:
+    def test_returns_the_list(self, app: FastAPI, client: TestClient) -> None:
+        app.dependency_overrides[get_list_businesses_use_case] = lambda: StubUseCase(
+            result=[_dto(), _dto()]
+        )
+
+        response = client.get("/ops/businesses", headers=ops_headers())
+
+        assert response.status_code == 200
+        assert len(response.json()) == 2
+
+    def test_requires_auth(self, app: FastAPI, client: TestClient) -> None:
+        app.dependency_overrides[get_list_businesses_use_case] = lambda: StubUseCase(result=[])
+        response = client.get("/ops/businesses")
+        assert response.status_code == 401
+
+
+class TestListLocalities:
+    def test_returns_the_list(self, app: FastAPI, client: TestClient) -> None:
+        region_id = uuid.uuid4()
+        dto = LocalityDTO(
+            id=uuid.uuid4(), region_id=region_id, name_mr="पिंपळनेर", name_en="Pimpalner"
+        )
+        app.dependency_overrides[get_list_localities_use_case] = lambda: StubUseCase(result=[dto])
+
+        response = client.get(
+            "/ops/localities", params={"region_id": str(region_id)}, headers=ops_headers()
+        )
+
+        assert response.status_code == 200
+        assert response.json()[0]["name_mr"] == "पिंपळनेर"
+
+
+class TestListCategories:
+    def test_returns_the_list(self, app: FastAPI, client: TestClient) -> None:
+        dto = CategoryDTO(
+            id=uuid.uuid4(),
+            slug="pesticide-dealer",
+            name_mr="कृषी सेवा केंद्र",
+            name_en="Agri-input dealer",
+            tier=1,
+            routable=True,
+        )
+        app.dependency_overrides[get_list_categories_use_case] = lambda: StubUseCase(result=[dto])
+
+        response = client.get("/ops/categories", headers=ops_headers())
+
+        assert response.status_code == 200
+        assert response.json()[0]["slug"] == "pesticide-dealer"

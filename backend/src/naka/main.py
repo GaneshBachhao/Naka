@@ -6,8 +6,10 @@ from contextlib import asynccontextmanager
 
 from anthropic import AsyncAnthropic
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from redis.asyncio import Redis
 
+from naka.catalog.api.router import ops_catalog_router
 from naka.catalog.api.router import ops_router as catalog_ops_router
 from naka.enquiry.api.router import ops_router as enquiry_ops_router
 from naka.enquiry.api.router import public_router as enquiry_public_router
@@ -38,6 +40,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 def create_app() -> FastAPI:
     app = FastAPI(title="Naka", version="0.1.0", lifespan=lifespan)
 
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=Settings().cors_allowed_origins,
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     @app.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "ok"}
@@ -45,6 +55,7 @@ def create_app() -> FastAPI:
     app.include_router(enquiry_public_router)
     app.include_router(enquiry_ops_router)
     app.include_router(catalog_ops_router)
+    app.include_router(ops_catalog_router)
     app.include_router(verification_ops_router)
 
     return app

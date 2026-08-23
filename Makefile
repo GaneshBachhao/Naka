@@ -1,6 +1,6 @@
 # Makefile
 
-.PHONY: up down test lint migrate worker api
+.PHONY: up down test lint migrate worker api ops-token
 
 up:
 	docker compose up -d
@@ -22,3 +22,6 @@ worker:
 
 api:
 	cd backend && uv run uvicorn naka.main:app --reload --app-dir src
+
+ops-token:
+	cd backend && uv run python scripts/mint_ops_token.py

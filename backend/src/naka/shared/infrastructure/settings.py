@@ -15,3 +15,4 @@ class Settings(BaseSettings):
     environment: str = "development"
     default_locale: str = "mr"
     response_link_base_url: str = "https://naka.in/r"
+    cors_allowed_origins: list[str] = ["http://localhost:3000"]

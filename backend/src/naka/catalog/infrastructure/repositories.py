@@ -38,13 +38,15 @@ class SqlAlchemyBusinessRepository:
     async def update(self, business: Business) -> None:
         await self._session.merge(business_to_model(business))
 
+    async def list_all(self) -> list[Business]:
+        result = await self._session.execute(select(BusinessModel))
+        return [business_to_domain(model) for model in result.scalars().all()]
 
-# Region/Locality/Category persistence has no application-layer port or use
-# case consumer yet - T4's use cases only needed businesses. These exist
-# because T10 (seeding Sakri's regions, localities, and category tree) will
-# need them imminently, and the mappers were already written for round-trip
-# fidelity with T1's domain entities; leaving that code unbacked by a
-# repository would just be dead weight sitting untested in the tree.
+
+# Region still has no application-layer port or use case consumer - T10
+# (seeding Sakri's region record) will need it. Locality/Category are now
+# backed by ListLocalities/ListCategories (T8: the ops console's business
+# form needs somewhere to source its dropdowns from).
 
 
 class SqlAlchemyRegionRepository:

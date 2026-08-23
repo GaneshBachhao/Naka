@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Protocol
 
 from naka.enquiry.domain.entities import Enquiry
@@ -23,6 +24,8 @@ class EnquiryRepository(Protocol):
     async def list_routed(self) -> list[Enquiry]: ...
 
     async def list_recent(self, limit: int = 100) -> list[Enquiry]: ...
+
+    async def list_since(self, cutoff: datetime) -> list[Enquiry]: ...
 
 
 class AIClientPort(Protocol):

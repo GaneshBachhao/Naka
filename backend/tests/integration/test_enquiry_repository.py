@@ -126,3 +126,19 @@ class TestSqlAlchemyEnquiryRepository:
 
         [only] = await repo.list_recent(limit=1)
         assert only.id == newer.id
+
+    async def test_list_since_excludes_enquiries_before_the_cutoff(
+        self, db_session: AsyncSession
+    ) -> None:
+        repo = SqlAlchemyEnquiryRepository(db_session)
+        older = make_received_enquiry(created_at=NOW - dt.timedelta(hours=1))
+        newer = make_received_enquiry(created_at=NOW)
+        await repo.add(older)
+        await repo.add(newer)
+        await db_session.flush()
+        db_session.expunge_all()
+
+        results = await repo.list_since(NOW)
+        result_ids = {e.id for e in results}
+        assert newer.id in result_ids
+        assert older.id not in result_ids

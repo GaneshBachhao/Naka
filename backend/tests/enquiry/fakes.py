@@ -39,6 +39,9 @@ class FakeEnquiryRepository:
         ordered = sorted(self.by_id.values(), key=lambda e: e.created_at, reverse=True)
         return ordered[:limit]
 
+    async def list_since(self, cutoff: dt.datetime) -> list[Enquiry]:
+        return [e for e in self.by_id.values() if e.created_at >= cutoff]
+
 
 class FakeLocalityLookupPort:
     def __init__(self, names: dict[LocalityId, str] | None = None) -> None:

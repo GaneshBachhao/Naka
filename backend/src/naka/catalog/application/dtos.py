@@ -43,4 +43,37 @@ class BusinessDTO(BaseModel):
     landmark: str
     latitude: float
     longitude: float
+    opening_hours: dict[int, DayHoursRequest]
+    attributes: list[str]
     publication_state: str
+
+
+class UpdateBusinessRequest(BaseModel):
+    locality_id: uuid.UUID
+    name_mr: str
+    name_en: str
+    owner_name: str
+    category_ids: list[uuid.UUID]
+    contact_numbers: list[str]
+    whatsapp_number: str | None = None
+    landmark: str
+    latitude: float
+    longitude: float
+    opening_hours: dict[int, DayHoursRequest]
+    attributes: list[str] = Field(default_factory=list)
+
+
+class LocalityDTO(BaseModel):
+    id: uuid.UUID
+    region_id: uuid.UUID
+    name_mr: str
+    name_en: str
+
+
+class CategoryDTO(BaseModel):
+    id: uuid.UUID
+    slug: str
+    name_mr: str
+    name_en: str
+    tier: int
+    routable: bool
