@@ -1,7 +1,7 @@
 # backend/src/naka/verification/api/router.py
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from naka.shared.api.deps import require_ops_auth
 from naka.verification.api.deps import (
@@ -30,7 +30,10 @@ async def record_verification(
     request: RecordVerificationRequest,
     use_case: RecordVerification = Depends(get_record_verification_use_case),
 ) -> VerificationRecordDTO:
-    return await use_case.execute(request)
+    try:
+        return await use_case.execute(request)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
 
 
 @ops_router.get(

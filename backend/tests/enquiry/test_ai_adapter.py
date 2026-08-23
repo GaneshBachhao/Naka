@@ -9,6 +9,7 @@ import pytest
 
 from naka.catalog.domain.entities import Category
 from naka.catalog.domain.entities import Locality as CatalogLocality
+from naka.enquiry.application.errors import AIClientUnavailableError
 from naka.enquiry.domain.value_objects import Urgency
 from naka.enquiry.infrastructure.ai_adapter import AnthropicAIAdapter
 from naka.shared.domain.ids import RegionId
@@ -51,6 +52,16 @@ class _FakeMessages:
 class _FakeAnthropicClient:
     def __init__(self, response: Any) -> None:
         self.messages = _FakeMessages(response)
+
+
+class _FailingMessages:
+    async def create(self, **kwargs: Any) -> Any:
+        raise TypeError("Could not resolve authentication method")
+
+
+class _FailingAnthropicClient:
+    def __init__(self) -> None:
+        self.messages = _FailingMessages()
 
 
 def _response_with(**payload: Any) -> Any:
@@ -148,3 +159,15 @@ class TestAnthropicAIAdapter:
         [tool] = call["tools"]
         assert category.slug in tool["input_schema"]["properties"]["category_slug"]["enum"]
         assert locality.name_en in tool["input_schema"]["properties"]["locality_name"]["enum"]
+
+    async def test_wraps_a_provider_failure_as_ai_client_unavailable(
+        self, category: Category, locality: CatalogLocality
+    ) -> None:
+        adapter = AnthropicAIAdapter(
+            _FailingAnthropicClient(),  # type: ignore[arg-type]
+            _FakeCategories([category]),
+            _FakeLocalities([locality]),
+        )
+
+        with pytest.raises(AIClientUnavailableError, match="AI parsing is unavailable"):
+            await adapter.parse_enquiry_intent("text", RegionId.new())

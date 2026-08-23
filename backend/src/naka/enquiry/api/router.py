@@ -35,6 +35,7 @@ from naka.enquiry.application.dtos import (
     SubmitEnquiryRequest,
 )
 from naka.enquiry.application.errors import (
+    AIClientUnavailableError,
     EnquiryNotFoundError,
     InsufficientRoutingCandidatesError,
     InvalidRoutingSelectionError,
@@ -161,6 +162,8 @@ async def parse_enquiry(
         return await use_case.execute(EnquiryId(enquiry_id))
     except EnquiryNotFoundError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Enquiry not found") from exc
+    except AIClientUnavailableError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
 

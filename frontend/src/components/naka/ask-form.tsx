@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { submitEnquiryAction } from "@/app/[region]/actions";
 
 /**
@@ -5,7 +6,15 @@ import { submitEnquiryAction } from "@/app/[region]/actions";
  * brief. A real <form> posting through a Server Action, same near-zero-JS
  * approach as the dealer response page: it works even with JS disabled.
  */
-export function AskForm({ regionId, regionName }: { regionId: string; regionName: string }) {
+export function AskForm({
+  regionId,
+  regionSlug,
+  regionName,
+}: {
+  regionId: string;
+  regionSlug: string;
+  regionName: string;
+}) {
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-4 py-10">
       <div className="text-center">
@@ -50,6 +59,13 @@ export function AskForm({ regionId, regionName }: { regionId: string; regionName
           विचारा
         </button>
       </form>
+
+      <Link
+        href={`/${regionSlug}/emergency`}
+        className="text-center text-base font-semibold text-stop hover:underline"
+      >
+        आपत्कालीन क्रमांक
+      </Link>
     </main>
   );
 }

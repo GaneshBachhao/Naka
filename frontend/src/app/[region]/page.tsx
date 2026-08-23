@@ -19,5 +19,5 @@ export default async function RegionHomePage({
     );
   }
 
-  return <AskForm regionId={region.id} regionName={region.name_mr} />;
+  return <AskForm regionId={region.id} regionSlug={region.slug} regionName={region.name_mr} />;
 }

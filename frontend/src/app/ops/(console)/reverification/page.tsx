@@ -7,7 +7,7 @@ import { useBusinessNames } from "@/components/ops/use-business-names";
 import { getReverificationQueue, recordVerification } from "@/lib/ops-api";
 
 const TIERS = ["field_verified", "owner_confirmed", "contact_verified", "sourced"];
-const METHODS = ["field_visit", "phone_call", "owner_self_service", "third_party_source"];
+const METHODS = ["field_visit", "owner_confirmation", "phone_call", "public_source"];
 
 export default function ReverificationQueuePage() {
   const { nameFor } = useBusinessNames();

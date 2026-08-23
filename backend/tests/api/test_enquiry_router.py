@@ -35,6 +35,7 @@ from naka.enquiry.application.dtos import (
     WinningAnswerDTO,
 )
 from naka.enquiry.application.errors import (
+    AIClientUnavailableError,
     EnquiryNotFoundError,
     InsufficientRoutingCandidatesError,
     InvalidRoutingSelectionError,
@@ -243,6 +244,15 @@ class TestParseEnquiry:
         response = client.post(f"/ops/enquiries/{uuid.uuid4()}/parse", headers=ops_headers())
 
         assert response.status_code == 404
+
+    def test_maps_ai_client_unavailable_to_502(self, app: FastAPI, client: TestClient) -> None:
+        app.dependency_overrides[get_parse_enquiry_use_case] = lambda: StubUseCase(
+            exception=AIClientUnavailableError("AI parsing is unavailable: no API key")
+        )
+
+        response = client.post(f"/ops/enquiries/{uuid.uuid4()}/parse", headers=ops_headers())
+
+        assert response.status_code == 502
 
 
 class TestSuggestRoutingCandidates:

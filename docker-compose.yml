@@ -30,6 +30,70 @@ services:
       timeout: 5s
       retries: 10
 
+  # Runs migrations, then seeds Sakri (idempotent - see scripts/seed_sakri.py)
+  # before starting the API. One service owns the migrate+seed step so
+  # `worker` doesn't race it; `worker` and `frontend` wait on this
+  # container's healthcheck, which only passes once uvicorn is actually
+  # serving, i.e. after migrate+seed already finished.
+  api:
+    build: ./backend
+    restart: unless-stopped
+    command: >
+      sh -c "alembic upgrade head &&
+             python scripts/seed_sakri.py &&
+             uvicorn naka.main:app --host 0.0.0.0 --port 8000 --app-dir src"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-naka}:${POSTGRES_PASSWORD:-naka}@postgres:5432/${POSTGRES_DB:-naka}
+      REDIS_URL: redis://redis:6379/0
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      JWT_SECRET: ${JWT_SECRET:-change-me}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEFAULT_LOCALE: ${DEFAULT_LOCALE:-mr}
+      RESPONSE_LINK_BASE_URL: ${RESPONSE_LINK_BASE_URL:-http://localhost:3000/r}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-["http://localhost:3000"]}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  worker:
+    build: ./backend
+    restart: unless-stopped
+    command: arq naka.worker.WorkerSettings
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-naka}:${POSTGRES_PASSWORD:-naka}@postgres:5432/${POSTGRES_DB:-naka}
+      REDIS_URL: redis://redis:6379/0
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    depends_on:
+      api:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    restart: unless-stopped
+    environment:
+      # Server Components/Actions run inside this container and must reach
+      # the api container by its service name, not localhost.
+      API_BASE_URL: http://api:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
 volumes:
   naka_postgres_data:
   naka_redis_data:

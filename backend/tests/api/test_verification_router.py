@@ -58,6 +58,24 @@ class TestRecordVerification:
         assert response.status_code == 201
         assert response.json()["tier"] == "field_verified"
 
+    def test_maps_invalid_enum_value_to_422(self, app: FastAPI, client: TestClient) -> None:
+        app.dependency_overrides[get_record_verification_use_case] = lambda: StubUseCase(
+            exception=ValueError("'owner_self_service' is not a valid VerificationMethod")
+        )
+
+        response = client.post(
+            "/ops/verifications",
+            json={
+                "business_id": str(uuid.uuid4()),
+                "tier": "field_verified",
+                "method": "owner_self_service",
+                "verified_by": "Agent Ramesh",
+            },
+            headers=ops_headers(),
+        )
+
+        assert response.status_code == 422
+
 
 class TestReverificationQueue:
     def test_returns_the_queue(self, app: FastAPI, client: TestClient) -> None:

@@ -9,6 +9,7 @@ from anthropic.types import MessageParam, ToolChoiceToolParam, ToolParam
 
 from naka.catalog.domain.entities import Category
 from naka.catalog.domain.entities import Locality as CatalogLocality
+from naka.enquiry.application.errors import AIClientUnavailableError
 from naka.enquiry.domain.value_objects import ParsedIntent, Urgency
 from naka.shared.domain.ids import RegionId
 
@@ -115,14 +116,22 @@ class AnthropicAIAdapter:
         tool = _build_tool(sorted(category_by_slug), sorted(locality_by_name))
         tool_choice: ToolChoiceToolParam = {"type": "tool", "name": "parsed_enquiry_intent"}
         messages: list[MessageParam] = [{"role": "user", "content": raw_text}]
-        response = await self._client.messages.create(
-            model=self._model,
-            max_tokens=1024,
-            system=_SYSTEM_PROMPT,
-            tools=[tool],
-            tool_choice=tool_choice,
-            messages=messages,
-        )
+        try:
+            response = await self._client.messages.create(
+                model=self._model,
+                max_tokens=1024,
+                system=_SYSTEM_PROMPT,
+                tools=[tool],
+                tool_choice=tool_choice,
+                messages=messages,
+            )
+        except Exception as exc:
+            # Anything from "no API key configured" (a TypeError raised
+            # client-side before a request is even sent) through real
+            # anthropic.APIError network/auth/rate-limit failures - the
+            # operator gets a clean "try again" message, not a provider
+            # stack trace.
+            raise AIClientUnavailableError(f"AI parsing is unavailable: {exc}") from exc
         payload = _extract_tool_input(response, "parsed_enquiry_intent")
 
         return ParsedIntent(

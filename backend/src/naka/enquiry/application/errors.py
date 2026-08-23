@@ -15,3 +15,9 @@ class InvalidRoutingSelectionError(Exception):
     a business that isn't actually an eligible candidate for this enquiry's
     category and locality - e.g. a stale suggestions list from before the
     business was suspended."""
+
+
+class AIClientUnavailableError(Exception):
+    """Raised when AIClientPort can't reach the underlying provider - missing
+    credentials, a network failure, a rate limit. The operator sees a clean
+    "try again" message instead of a raw provider stack trace."""

@@ -1,6 +1,6 @@
 # Makefile
 
-.PHONY: up down test lint migrate worker api ops-token
+.PHONY: up down test lint migrate seed worker api ops-token
 
 up:
 	docker compose up -d
@@ -16,6 +16,9 @@ lint:
 
 migrate:
 	cd backend && uv run alembic upgrade head
+
+seed:
+	cd backend && uv run python scripts/seed_sakri.py
 
 worker:
 	cd backend && uv run arq naka.worker.WorkerSettings
