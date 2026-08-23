@@ -1,6 +1,6 @@
 # Makefile
 
-.PHONY: up down test lint migrate worker
+.PHONY: up down test lint migrate worker api
 
 up:
 	docker compose up -d
@@ -19,3 +19,6 @@ migrate:
 
 worker:
 	cd backend && uv run arq naka.worker.WorkerSettings
+
+api:
+	cd backend && uv run uvicorn naka.main:app --reload --app-dir src
