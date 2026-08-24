@@ -29,14 +29,14 @@ export function OperatorQueueView() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="mb-3 font-heading text-xl font-bold">Pending outbound messages</h1>
-      <p className="mb-4 text-sm text-stone">
+      <h1 className="mb-3 text-xl font-bold">Pending outbound messages</h1>
+      <p className="mb-4 text-sm text-muted-foreground">
         Wizard-of-Oz: copy each message, send it by hand over WhatsApp, then mark it sent.
       </p>
-      {pending.length === 0 && <p className="text-stone">Nothing pending.</p>}
+      {pending.length === 0 && <p className="text-muted-foreground">Nothing pending.</p>}
       <ul className="flex flex-col gap-3">
         {pending.map((m) => (
-          <li key={m.id} className="rounded-md border border-stone/20 p-3 text-sm">
+          <li key={m.id} className="rounded-md border border-border p-3 text-sm">
             <div className="mb-1 flex items-center justify-between">
               <span className="font-semibold">
                 {m.recipient_kind} · {m.phone_number}
@@ -44,20 +44,20 @@ export function OperatorQueueView() {
               <div className="flex gap-2">
                 <button
                   onClick={() => copy(m.id, m.message)}
-                  className="rounded bg-field px-2 py-0.5 text-xs text-paper"
+                  className="rounded bg-primary px-2 py-0.5 text-xs text-primary-foreground"
                 >
                   {copiedId === m.id ? "Copied!" : "Copy"}
                 </button>
                 <button
                   onClick={() => markSent.mutate(m.id)}
                   disabled={markSent.isPending}
-                  className="rounded bg-haldi px-2 py-0.5 text-xs font-semibold text-ink"
+                  className="rounded bg-success px-2 py-0.5 text-xs font-semibold text-success-foreground"
                 >
                   Mark sent
                 </button>
               </div>
             </div>
-            <pre className="whitespace-pre-wrap rounded bg-paper p-2 text-xs">{m.message}</pre>
+            <pre className="whitespace-pre-wrap rounded bg-muted p-2 text-xs">{m.message}</pre>
           </li>
         ))}
       </ul>

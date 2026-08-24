@@ -18,8 +18,8 @@ export function TokenLoginView() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-4 px-4">
-      <h1 className="font-heading text-2xl font-bold text-ink">Naka Ops</h1>
-      <p className="text-sm text-stone">
+      <h1 className="text-2xl font-bold text-foreground">Naka Ops</h1>
+      <p className="text-sm text-muted-foreground">
         Paste the operator token minted with <code>make ops-token</code>. There&apos;s no login
         flow yet - this is a stand-in until the identity context ships.
       </p>
@@ -30,11 +30,11 @@ export function TokenLoginView() {
           value={token}
           onChange={(e) => setToken(e.target.value)}
           placeholder="eyJhbGci..."
-          className="h-11 rounded-md border border-stone/40 bg-paper px-3 font-mono text-sm text-ink focus-visible:border-field focus-visible:outline-none"
+          className="h-11 rounded-md border border-input bg-background px-3 font-mono text-sm text-foreground focus-visible:border-primary focus-visible:outline-none"
         />
         <button
           type="submit"
-          className="h-11 rounded-md bg-field text-sm font-semibold text-paper"
+          className="h-11 rounded-md bg-primary text-sm font-semibold text-primary-foreground"
         >
           Enter console
         </button>

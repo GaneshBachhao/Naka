@@ -7,13 +7,13 @@ import { useEffect, useMemo, useState } from "react";
 import { listEnquiryQueue } from "@/lib/ops-api";
 
 const STATUS_COLOR: Record<string, string> = {
-  received: "text-stone",
-  parsed: "text-stone",
-  routed: "text-haldi",
-  answered: "text-field",
-  unanswered: "text-stop",
-  deflected: "text-stop",
-  closed: "text-stone",
+  received: "text-muted-foreground",
+  parsed: "text-muted-foreground",
+  routed: "text-primary",
+  answered: "text-success",
+  unanswered: "text-destructive",
+  deflected: "text-destructive",
+  closed: "text-muted-foreground",
 };
 
 export function EnquiryQueueView() {
@@ -47,15 +47,19 @@ export function EnquiryQueueView() {
 
   return (
     <div>
-      <h1 className="mb-3 font-heading text-xl font-bold">
+      <h1 className="mb-3 text-xl font-bold">
         Live enquiry queue{" "}
-        <span className="text-sm font-normal text-stone">(↑↓ to move, Enter to open)</span>
+        <span className="text-sm font-normal text-muted-foreground">
+          (↑↓ to move, Enter to open)
+        </span>
       </h1>
-      {isLoading && <p className="text-stone">Loading...</p>}
-      {!isLoading && items.length === 0 && <p className="text-stone">No enquiries yet.</p>}
+      {isLoading && <p className="text-muted-foreground">Loading...</p>}
+      {!isLoading && items.length === 0 && (
+        <p className="text-muted-foreground">No enquiries yet.</p>
+      )}
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-stone/30 text-left text-stone">
+          <tr className="border-b border-border text-left text-muted-foreground">
             <th className="py-1 pr-4">Age</th>
             <th className="py-1 pr-4">Status</th>
             <th className="py-1">Text</th>
@@ -66,11 +70,13 @@ export function EnquiryQueueView() {
             <tr
               key={item.id}
               onClick={() => router.push(`/ops/enquiries/${item.id}`)}
-              className={`cursor-pointer border-b border-stone/10 ${
-                i === selected ? "bg-field/10" : "hover:bg-stone/5"
+              className={`cursor-pointer border-b border-border ${
+                i === selected ? "bg-primary/10" : "hover:bg-muted"
               }`}
             >
-              <td className="py-1.5 pr-4 tabular-nums text-stone">{item.minutes_ago}m</td>
+              <td className="py-1.5 pr-4 tabular-nums text-muted-foreground">
+                {item.minutes_ago}m
+              </td>
               <td className={`py-1.5 pr-4 font-semibold ${STATUS_COLOR[item.status] ?? ""}`}>
                 {item.status}
               </td>

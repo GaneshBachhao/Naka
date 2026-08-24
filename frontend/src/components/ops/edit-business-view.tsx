@@ -30,19 +30,19 @@ export function EditBusinessView() {
   });
 
   const business = businessQuery.data;
-  if (!business) return <p className="text-stone">Loading...</p>;
+  if (!business) return <p className="text-muted-foreground">Loading...</p>;
 
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <h1 className="font-heading text-xl font-bold">{business.name_en}</h1>
+        <h1 className="text-xl font-bold">{business.name_en}</h1>
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-stone">{business.publication_state}</span>
+          <span className="text-muted-foreground">{business.publication_state}</span>
           {(business.publication_state === "draft" || business.publication_state === "suspended") && (
             <button
               onClick={() => publish.mutate()}
               disabled={publish.isPending}
-              className="rounded bg-haldi px-2 py-1 text-xs font-semibold text-ink"
+              className="rounded bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground"
             >
               Publish
             </button>
@@ -55,9 +55,9 @@ export function EditBusinessView() {
         pending={update.isPending}
         submitLabel="Save changes"
       />
-      {update.isSuccess && <p className="mt-2 text-sm text-field">Saved.</p>}
+      {update.isSuccess && <p className="mt-2 text-sm text-success">Saved.</p>}
       {update.isError && (
-        <p className="mt-2 text-sm text-stop">{(update.error as Error).message}</p>
+        <p className="mt-2 text-sm text-destructive">{(update.error as Error).message}</p>
       )}
     </div>
   );

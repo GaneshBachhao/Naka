@@ -8,32 +8,46 @@ Run `ruff check . && mypy --strict . && pytest` after each task before moving on
 
 ## Design direction (referenced by T7–T9)
 
-Give this to Claude Code whenever it builds UI. It is deliberately specific — without it you get generic shadcn defaults.
+Give this to Claude Code whenever it builds UI. Revised from the original hand-painted-signboard
+brief to shadcn/ui's own default theme, on request — a deliberate switch to the generic modern
+baseline, not an accident. Don't invent a custom visual identity on top of it; when in doubt,
+match what `ui.shadcn.com` ships by default.
 
-**Subject world.** The naka is the road junction in a taluka where dealers, farmers, and workers meet. Its visual vernacular is hand-painted shop signboards: heavy Devanagari lettering, flat saturated colour on enamel and painted metal, chalk price boards outside agri shops, MSRTC bus-stand destination boards. Draw from that, not from SaaS dashboards.
+**System.** shadcn/ui default theme — Zinc neutrals + a single Indigo accent, Radix-based
+components, Tailwind. No signage vernacular, no material metaphor to draw from.
 
-**Palette** — signboard, not startup. No purple-blue gradients, no cream-and-terracotta.
+**Palette**
 ```
---ink     #14261F   near-black green, all body text
---field   #0F5132   signboard green, primary
---haldi   #E8A317   turmeric amber, accent + "available" state
---paper   #FAF8F3   background
---stone   #6B7A72   muted text, borders
---stop    #B3261E   "not available", errors
+--background   #FFFFFF   surface
+--canvas       #FAFAFA   page background
+--foreground   #09090B   body text (zinc-950)
+--muted        #71717A   secondary text, placeholders (zinc-500)
+--border       #E4E4E7   dividers, input borders (zinc-200)
+--primary      #4F46E5   buttons, links, active state (indigo-600)
+--success      #059669   "available" state (emerald-600)
+--destructive  #DC2626   errors, emergency (red-600)
 ```
 
-**Type.** Body and UI: **Mukta** (Ek Type — Devanagari and Latin drawn as one harmonised family, so Marathi and English sit correctly on the same line). Display: **Anek Devanagari** at heavy weight and condensed width, echoing painted signboard lettering. Never render Devanagari in a Latin-first font with a fallback — the vertical metrics break and it looks cheap.
+**Type.** **Noto Sans** for UI/Latin text, **Noto Sans Devanagari** for Marathi/Hindi glyphs —
+Noto Sans itself has no Devanagari coverage, so list both in one `font-family` stack and let the
+browser fall back per glyph. No separate display face; headings are heavier weights of the same
+font, not a signage-style face.
 
-**Signature element.** The dealer response card. A farmer's question arrives as a card styled like a chalk price board, and the dealer taps one of three full-width answers. When answered, the card flips to a large, unmissable Devanagari **आहे** (have it) or **नाही** (don't). That single screen is the product — build it with more care than anything else.
+**Signature element.** The dealer response card still flips to a large, unmissable confirmation
+on submit (**आहे** / **नाही**) — the interaction is unchanged, only restyled: a shadcn card,
+indigo/emerald/red semantic states instead of hand-painted colour blocks.
 
-**Hard constraints, all load-bearing:**
-- Readable in direct sunlight — contrast ratio 7:1 minimum, never grey-on-grey
-- Tap targets 56px minimum. Assume one thumb, possibly wet or calloused hands
-- Base font 18px, not 16px. Many users are 45+ reading Marathi on a small screen
-- Under 100 KB initial JS. Assume 3G and a ₹6,000 phone
+**Constraints:**
+- WCAG AA contrast minimum (4.5:1 body text) — verify whatever accent actually ships against
+  `--background`, don't assume the default Indigo clears it in every combination
+- Tap targets 44px minimum (WCAG 2.5.5 / standard mobile floor)
+- Base font 16px
 - Icon plus label, never icon alone
 - Empty and failure states in Marathi, plain and directive — never apologetic
 - Keyboard focus visible, reduced motion respected
+- Under 100 KB initial JS on customer-facing pages — still assume 3G and a budget phone. The
+  visual identity changed; the audience (rural Maharashtra, many users 45+) didn't, and this
+  constraint was never about the signboard look in the first place
 
 ---
 

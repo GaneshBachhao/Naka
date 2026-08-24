@@ -39,13 +39,13 @@ export async function EnquiryStatusView({ enquiryId }: { enquiryId: string }) {
   if (data.status === "answered") {
     return (
       <main className="flex min-h-dvh flex-col items-center justify-center px-4 py-10">
-        <div className="motion-safe:animate-[naka-flip_0.6s_ease-out] flex w-full max-w-md flex-col items-center gap-3 rounded-2xl bg-field px-6 py-14 text-center text-paper shadow-lg [backface-visibility:hidden]">
-          <p className="font-heading text-4xl leading-tight font-extrabold">आहे!</p>
+        <div className="motion-safe:animate-[naka-flip_0.6s_ease-out] flex w-full max-w-md flex-col items-center gap-3 rounded-2xl bg-success px-6 py-14 text-center text-success-foreground shadow-lg [backface-visibility:hidden]">
+          <p className="text-4xl leading-tight font-extrabold">आहे!</p>
           <p className="text-xl">एका दुकानाकडे हे उपलब्ध आहे.</p>
           {data.answer?.price_paise != null && (
-            <p className="text-2xl font-bold text-haldi">{rupees(data.answer.price_paise)}</p>
+            <p className="text-2xl font-bold">{rupees(data.answer.price_paise)}</p>
           )}
-          {data.answer?.note && <p className="text-lg text-paper/90">{data.answer.note}</p>}
+          {data.answer?.note && <p className="text-lg opacity-90">{data.answer.note}</p>}
         </div>
       </main>
     );

@@ -29,17 +29,17 @@ export function ReverificationQueueView() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="mb-3 font-heading text-xl font-bold">Reverification queue</h1>
-      <p className="mb-4 text-sm text-stone">
+      <h1 className="mb-3 text-xl font-bold">Reverification queue</h1>
+      <p className="mb-4 text-sm text-muted-foreground">
         Ranked: paying businesses first, then routable categories, then oldest verification.
       </p>
       <ul className="flex flex-col gap-2">
         {data?.map((item) => (
-          <li key={item.business_id} className="rounded-md border border-stone/20 p-3 text-sm">
+          <li key={item.business_id} className="rounded-md border border-border p-3 text-sm">
             <div className="flex items-center justify-between">
               <span>
                 <span className="font-semibold">{nameFor(item.business_id)}</span>
-                <span className="text-stone">
+                <span className="text-muted-foreground">
                   {" "}
                   · {item.tier} · {item.days_until_decay}d until decay
                   {item.is_paying ? " · paying" : ""}
@@ -48,7 +48,7 @@ export function ReverificationQueueView() {
               </span>
               <button
                 onClick={() => setOpenFor(openFor === item.business_id ? null : item.business_id)}
-                className="rounded bg-field px-2 py-0.5 text-xs font-semibold text-paper"
+                className="rounded bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground"
               >
                 Record verification
               </button>
@@ -62,7 +62,7 @@ export function ReverificationQueueView() {
             )}
           </li>
         ))}
-        {data?.length === 0 && <p className="text-stone">Nothing due.</p>}
+        {data?.length === 0 && <p className="text-muted-foreground">Nothing due.</p>}
       </ul>
     </div>
   );
@@ -94,14 +94,14 @@ function VerificationForm({
         e.preventDefault();
         onSubmit({ business_id: businessId, tier, method, verified_by: verifiedBy, notes });
       }}
-      className="mt-2 flex flex-wrap items-end gap-2 border-t border-stone/20 pt-2"
+      className="mt-2 flex flex-wrap items-end gap-2 border-t border-border pt-2"
     >
-      <label className="flex flex-col text-xs text-stone">
+      <label className="flex flex-col text-xs text-muted-foreground">
         Tier
         <select
           value={tier}
           onChange={(e) => setTier(e.target.value)}
-          className="h-8 rounded border border-stone/40 px-1"
+          className="h-8 rounded border border-input px-1"
         >
           {TIERS.map((t) => (
             <option key={t} value={t}>
@@ -110,12 +110,12 @@ function VerificationForm({
           ))}
         </select>
       </label>
-      <label className="flex flex-col text-xs text-stone">
+      <label className="flex flex-col text-xs text-muted-foreground">
         Method
         <select
           value={method}
           onChange={(e) => setMethod(e.target.value)}
-          className="h-8 rounded border border-stone/40 px-1"
+          className="h-8 rounded border border-input px-1"
         >
           {METHODS.map((m) => (
             <option key={m} value={m}>
@@ -124,27 +124,27 @@ function VerificationForm({
           ))}
         </select>
       </label>
-      <label className="flex flex-col text-xs text-stone">
+      <label className="flex flex-col text-xs text-muted-foreground">
         Verified by
         <input
           value={verifiedBy}
           onChange={(e) => setVerifiedBy(e.target.value)}
           required
-          className="h-8 rounded border border-stone/40 px-1"
+          className="h-8 rounded border border-input px-1"
         />
       </label>
-      <label className="flex flex-col text-xs text-stone">
+      <label className="flex flex-col text-xs text-muted-foreground">
         Notes
         <input
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          className="h-8 rounded border border-stone/40 px-1"
+          className="h-8 rounded border border-input px-1"
         />
       </label>
       <button
         type="submit"
         disabled={pending}
-        className="h-8 rounded bg-field px-3 text-xs font-semibold text-paper disabled:opacity-50"
+        className="h-8 rounded bg-primary px-3 text-xs font-semibold text-primary-foreground disabled:opacity-50"
       >
         Save
       </button>

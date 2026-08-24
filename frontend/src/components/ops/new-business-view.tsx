@@ -20,14 +20,14 @@ export function NewBusinessView() {
 
   return (
     <div>
-      <h1 className="mb-3 font-heading text-xl font-bold">New business</h1>
+      <h1 className="mb-3 text-xl font-bold">New business</h1>
       <BusinessForm
         onSubmit={(values) => create.mutate(values)}
         pending={create.isPending}
         submitLabel="Create (draft)"
       />
       {create.isError && (
-        <p className="mt-2 text-sm text-stop">{(create.error as Error).message}</p>
+        <p className="mt-2 text-sm text-destructive">{(create.error as Error).message}</p>
       )}
     </div>
   );

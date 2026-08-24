@@ -174,11 +174,11 @@ export function BusinessForm({
           <input
             {...register("region_id")}
             disabled={Boolean(existing)}
-            className="h-9 w-full rounded border border-stone/40 px-2 disabled:bg-stone/10"
+            className="h-9 w-full rounded border border-input px-2 disabled:bg-muted"
           />
         </Field>
         <Field label="Locality" error={errors.locality_id?.message}>
-          <select {...register("locality_id")} className="h-9 w-full rounded border border-stone/40 px-2">
+          <select {...register("locality_id")} className="h-9 w-full rounded border border-input px-2">
             <option value="">select...</option>
             {localitiesQuery.data?.map((loc) => (
               <option key={loc.id} value={loc.id}>
@@ -191,15 +191,15 @@ export function BusinessForm({
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Name (Marathi)" error={errors.name_mr?.message}>
-          <input {...register("name_mr")} className="h-9 w-full rounded border border-stone/40 px-2" />
+          <input {...register("name_mr")} className="h-9 w-full rounded border border-input px-2" />
         </Field>
         <Field label="Name (English)" error={errors.name_en?.message}>
-          <input {...register("name_en")} className="h-9 w-full rounded border border-stone/40 px-2" />
+          <input {...register("name_en")} className="h-9 w-full rounded border border-input px-2" />
         </Field>
       </div>
 
       <Field label="Owner name" error={errors.owner_name?.message}>
-        <input {...register("owner_name")} className="h-9 w-full rounded border border-stone/40 px-2" />
+        <input {...register("owner_name")} className="h-9 w-full rounded border border-input px-2" />
       </Field>
 
       <Field label="Categories" error={errors.category_ids?.message}>
@@ -233,19 +233,19 @@ export function BusinessForm({
         <Field label="Contact numbers (comma-separated)" error={errors.contact_numbers?.message}>
           <input
             {...register("contact_numbers")}
-            className="h-9 w-full rounded border border-stone/40 px-2"
+            className="h-9 w-full rounded border border-input px-2"
           />
         </Field>
         <Field label="WhatsApp number">
           <input
             {...register("whatsapp_number")}
-            className="h-9 w-full rounded border border-stone/40 px-2"
+            className="h-9 w-full rounded border border-input px-2"
           />
         </Field>
       </div>
 
       <Field label="Landmark">
-        <input {...register("landmark")} className="h-9 w-full rounded border border-stone/40 px-2" />
+        <input {...register("landmark")} className="h-9 w-full rounded border border-input px-2" />
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
@@ -254,7 +254,7 @@ export function BusinessForm({
             type="number"
             step="any"
             {...register("latitude", { valueAsNumber: true })}
-            className="h-9 w-full rounded border border-stone/40 px-2"
+            className="h-9 w-full rounded border border-input px-2"
           />
         </Field>
         <Field label="Longitude" error={errors.longitude?.message}>
@@ -262,13 +262,13 @@ export function BusinessForm({
             type="number"
             step="any"
             {...register("longitude", { valueAsNumber: true })}
-            className="h-9 w-full rounded border border-stone/40 px-2"
+            className="h-9 w-full rounded border border-input px-2"
           />
         </Field>
       </div>
 
       <Field label="Attributes (comma-separated)">
-        <input {...register("attributes")} className="h-9 w-full rounded border border-stone/40 px-2" />
+        <input {...register("attributes")} className="h-9 w-full rounded border border-input px-2" />
       </Field>
 
       <div>
@@ -277,14 +277,14 @@ export function BusinessForm({
           <button
             type="button"
             onClick={copyMondayToAll}
-            className="text-xs text-field hover:underline"
+            className="text-xs text-primary hover:underline"
           >
             copy Monday to all days
           </button>
         </div>
         <table className="w-full text-xs">
           <thead>
-            <tr className="text-left text-stone">
+            <tr className="text-left text-muted-foreground">
               <th className="pb-1">Day</th>
               <th className="pb-1">Closed</th>
               <th className="pb-1">Open</th>
@@ -302,14 +302,14 @@ export function BusinessForm({
                   <input
                     type="time"
                     {...register(`opening_hours.${day.index}.open_time`)}
-                    className="h-8 rounded border border-stone/40 px-1"
+                    className="h-8 rounded border border-input px-1"
                   />
                 </td>
                 <td className="py-0.5">
                   <input
                     type="time"
                     {...register(`opening_hours.${day.index}.close_time`)}
-                    className="h-8 rounded border border-stone/40 px-1"
+                    className="h-8 rounded border border-input px-1"
                   />
                 </td>
               </tr>
@@ -321,7 +321,7 @@ export function BusinessForm({
       <button
         type="submit"
         disabled={pending}
-        className="mt-2 h-10 w-fit rounded-md bg-field px-4 font-semibold text-paper disabled:opacity-50"
+        className="mt-2 h-10 w-fit rounded-md bg-primary px-4 font-semibold text-primary-foreground disabled:opacity-50"
       >
         {pending ? "Saving..." : submitLabel}
       </button>
@@ -340,9 +340,9 @@ function Field({
 }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-xs text-stone">{label}</span>
+      <span className="text-xs text-muted-foreground">{label}</span>
       {children}
-      {error && <span className="text-xs text-stop">{error}</span>}
+      {error && <span className="text-xs text-destructive">{error}</span>}
     </label>
   );
 }

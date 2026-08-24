@@ -34,9 +34,9 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-dvh bg-paper text-ink">
-      <header className="sticky top-0 z-10 flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-stone/30 bg-paper px-4 py-2 text-sm">
-        <span className="font-heading text-lg font-bold">Naka Ops</span>
+    <div className="min-h-dvh bg-background text-foreground">
+      <header className="sticky top-0 z-10 flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border bg-background px-4 py-2 text-sm">
+        <span className="text-lg font-bold">Naka Ops</span>
         <nav className="flex gap-4">
           {NAV.map((item) => (
             <Link
@@ -44,22 +44,22 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
               href={item.href}
               className={
                 pathname === item.href
-                  ? "font-semibold text-field underline underline-offset-4"
-                  : "text-stone hover:text-ink"
+                  ? "font-semibold text-primary underline underline-offset-4"
+                  : "text-muted-foreground hover:text-foreground"
               }
             >
               {item.label}
             </Link>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-4 text-stone">
+        <div className="ml-auto flex items-center gap-4 text-muted-foreground">
           {counters && (
             <span>
               {counters.total_enquiries} today · {(counters.answer_rate * 100).toFixed(0)}%
               answered · median {formatSeconds(counters.median_response_seconds)}
             </span>
           )}
-          <button onClick={logout} className="text-stop hover:underline">
+          <button onClick={logout} className="text-destructive hover:underline">
             Log out
           </button>
         </div>

@@ -27,10 +27,10 @@ export async function EmergencyNumbersView({ regionSlug }: { regionSlug: string 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-4 py-10">
       <div className="text-center">
-        <p className="text-sm font-semibold tracking-wide text-stone uppercase">
+        <p className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
           {region.name_mr}
         </p>
-        <h1 className="mt-1 font-heading text-2xl font-extrabold text-ink">आपत्कालीन क्रमांक</h1>
+        <h1 className="mt-1 text-2xl font-bold text-foreground">आपत्कालीन क्रमांक</h1>
       </div>
 
       <ul className="flex flex-col gap-3">
@@ -38,18 +38,16 @@ export async function EmergencyNumbersView({ regionSlug }: { regionSlug: string 
           <li key={entry.number}>
             <a
               href={`tel:${entry.number}`}
-              className="flex h-16 items-center justify-between rounded-xl border-2 border-stop/50 bg-paper px-5 text-lg font-semibold text-ink"
+              className="flex h-14 items-center justify-between rounded-xl border border-destructive/40 bg-card px-5 text-lg font-semibold text-foreground"
             >
               {entry.label}
-              <span className="font-heading text-2xl font-extrabold text-stop">
-                {entry.number}
-              </span>
+              <span className="text-2xl font-bold text-destructive">{entry.number}</span>
             </a>
           </li>
         ))}
       </ul>
 
-      <p className="rounded-xl border-2 border-stone/30 bg-paper px-4 py-3 text-center text-base text-stone">
+      <p className="rounded-xl border border-border bg-card px-4 py-3 text-center text-base text-muted-foreground">
         {region.name_mr} मधील स्थानिक पोलीस स्टेशन आणि दवाखान्याचे क्रमांक लवकरच जोडले जातील.
       </p>
     </main>

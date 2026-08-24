@@ -6,11 +6,11 @@ import Link from "next/link";
 import { listBusinesses, publishBusiness } from "@/lib/ops-api";
 
 const STATE_COLOR: Record<string, string> = {
-  draft: "text-stone",
-  published_unverified: "text-haldi",
-  published_verified: "text-field",
-  suspended: "text-stop",
-  closed: "text-stop",
+  draft: "text-muted-foreground",
+  published_unverified: "text-primary",
+  published_verified: "text-success",
+  suspended: "text-destructive",
+  closed: "text-destructive",
 };
 
 export function BusinessListView() {
@@ -25,17 +25,17 @@ export function BusinessListView() {
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <h1 className="font-heading text-xl font-bold">Businesses</h1>
+        <h1 className="text-xl font-bold">Businesses</h1>
         <Link
           href="/ops/businesses/new"
-          className="rounded-md bg-field px-3 py-1.5 text-sm font-semibold text-paper"
+          className="rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground"
         >
           + New business
         </Link>
       </div>
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-stone/30 text-left text-stone">
+          <tr className="border-b border-border text-left text-muted-foreground">
             <th className="py-1 pr-4">Name</th>
             <th className="py-1 pr-4">Owner</th>
             <th className="py-1 pr-4">Status</th>
@@ -44,10 +44,10 @@ export function BusinessListView() {
         </thead>
         <tbody>
           {data?.map((b) => (
-            <tr key={b.id} className="border-b border-stone/10">
+            <tr key={b.id} className="border-b border-border">
               <td className="py-1.5 pr-4">
                 <Link href={`/ops/businesses/${b.id}`} className="hover:underline">
-                  {b.name_mr} <span className="text-stone">({b.name_en})</span>
+                  {b.name_mr} <span className="text-muted-foreground">({b.name_en})</span>
                 </Link>
               </td>
               <td className="py-1.5 pr-4">{b.owner_name}</td>
@@ -59,7 +59,7 @@ export function BusinessListView() {
                   <button
                     onClick={() => publish.mutate(b.id)}
                     disabled={publish.isPending}
-                    className="rounded bg-haldi px-2 py-0.5 text-xs font-semibold text-ink"
+                    className="rounded bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground"
                   >
                     Publish
                   </button>
@@ -69,7 +69,7 @@ export function BusinessListView() {
           ))}
         </tbody>
       </table>
-      {data?.length === 0 && <p className="mt-2 text-stone">No businesses yet.</p>}
+      {data?.length === 0 && <p className="mt-2 text-muted-foreground">No businesses yet.</p>}
     </div>
   );
 }

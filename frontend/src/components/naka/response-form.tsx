@@ -4,9 +4,9 @@ import { QuestionCard } from "@/components/naka/question-card";
 type Tone = "have" | "dont" | "later";
 
 const TONE_CHECKED_CLASS: Record<Tone, string> = {
-  have: "has-checked:border-field has-checked:bg-field has-checked:text-paper",
-  dont: "has-checked:border-stop has-checked:bg-stop has-checked:text-paper",
-  later: "has-checked:border-haldi has-checked:bg-haldi has-checked:text-ink",
+  have: "has-checked:border-success has-checked:bg-success has-checked:text-success-foreground",
+  dont: "has-checked:border-destructive has-checked:bg-destructive has-checked:text-white",
+  later: "has-checked:border-primary has-checked:bg-primary has-checked:text-primary-foreground",
 };
 
 /**
@@ -44,7 +44,7 @@ export function ResponseForm({
          * down via a descendant selector.
          */}
         <fieldset className="flex flex-col gap-3 has-[#have_it:checked]:[&_.price-fields]:flex">
-          <legend className="mb-1 text-lg font-semibold text-ink">तुमचे उत्तर निवडा</legend>
+          <legend className="mb-1 text-lg font-semibold text-foreground">तुमचे उत्तर निवडा</legend>
 
           <AnswerOption
             id="have_it"
@@ -72,9 +72,9 @@ export function ResponseForm({
           />
 
           {/* Revealed only when "आहे" is checked - pure CSS, no JS. */}
-          <div className="price-fields hidden flex-col gap-3 rounded-xl border-2 border-stone/30 bg-paper p-4">
+          <div className="price-fields hidden flex-col gap-3 rounded-xl border border-border bg-card p-4">
             <label className="flex flex-col gap-1">
-              <span className="text-base font-semibold text-ink">किंमत (ऐच्छिक)</span>
+              <span className="text-base font-semibold text-foreground">किंमत (ऐच्छिक)</span>
               <input
                 type="number"
                 name="price_rupees"
@@ -82,16 +82,16 @@ export function ResponseForm({
                 min={0}
                 step="1"
                 placeholder="₹"
-                className="h-14 rounded-lg border-2 border-stone/40 bg-paper px-4 text-lg text-ink placeholder:text-stone focus-visible:border-field focus-visible:outline-none"
+                className="h-12 rounded-lg border border-input bg-background px-4 text-lg text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none"
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-base font-semibold text-ink">टीप (ऐच्छिक)</span>
+              <span className="text-base font-semibold text-foreground">टीप (ऐच्छिक)</span>
               <input
                 type="text"
                 name="note"
                 maxLength={140}
-                className="h-14 rounded-lg border-2 border-stone/40 bg-paper px-4 text-lg text-ink focus-visible:border-field focus-visible:outline-none"
+                className="h-12 rounded-lg border border-input bg-background px-4 text-lg text-foreground focus-visible:border-primary focus-visible:outline-none"
               />
             </label>
           </div>
@@ -99,7 +99,7 @@ export function ResponseForm({
 
         <button
           type="submit"
-          className="h-16 w-full rounded-xl bg-field text-xl font-bold text-paper transition-transform active:translate-y-px"
+          className="h-14 w-full rounded-xl bg-primary text-xl font-bold text-primary-foreground transition-transform active:translate-y-px"
         >
           पाठवा
         </button>
@@ -126,7 +126,7 @@ function AnswerOption({
   return (
     <label
       htmlFor={id}
-      className={`flex min-h-14 w-full cursor-pointer items-center gap-4 rounded-xl border-2 border-stone/40 bg-paper px-5 py-4 text-ink transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-field ${TONE_CHECKED_CLASS[tone]}`}
+      className={`flex min-h-12 w-full cursor-pointer items-center gap-4 rounded-xl border border-border bg-card px-5 py-4 text-foreground transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${TONE_CHECKED_CLASS[tone]}`}
     >
       <input type="radio" name="kind" id={id} value={value} required className="sr-only" />
       <span aria-hidden="true" className="shrink-0">

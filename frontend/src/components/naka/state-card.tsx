@@ -31,10 +31,10 @@ export function StateCard({ variant }: { variant: StateVariant }) {
 export function ConfirmationCard({ wasFirst }: { wasFirst: boolean }) {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center px-4 py-10">
-      <div className="motion-safe:animate-[naka-flip_0.6s_ease-out] flex w-full max-w-md flex-col items-center gap-4 rounded-2xl bg-field px-6 py-14 text-center text-paper shadow-lg [backface-visibility:hidden]">
-        <p className="font-heading text-6xl leading-none font-extrabold">धन्यवाद!</p>
+      <div className="motion-safe:animate-[naka-flip_0.6s_ease-out] flex w-full max-w-md flex-col items-center gap-4 rounded-2xl bg-success px-6 py-14 text-center text-success-foreground shadow-lg [backface-visibility:hidden]">
+        <p className="text-5xl leading-none font-extrabold">धन्यवाद!</p>
         {wasFirst ? (
-          <p className="text-2xl font-bold text-haldi">तुम्ही सर्वात आधी उत्तर दिले!</p>
+          <p className="text-2xl font-bold">तुम्ही सर्वात आधी उत्तर दिले!</p>
         ) : (
           <p className="text-xl">तुमचे उत्तर नोंदवले गेले.</p>
         )}

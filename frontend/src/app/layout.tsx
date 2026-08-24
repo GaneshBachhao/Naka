@@ -1,24 +1,21 @@
 import type { Metadata } from "next";
-import { Anek_Devanagari, Mukta } from "next/font/google";
+import { Noto_Sans, Noto_Sans_Devanagari } from "next/font/google";
 import "./globals.css";
 
-// Mukta: Devanagari and Latin drawn as one harmonised family (Ek Type), so
-// Marathi and English sit correctly on the same line. Never fall back to a
-// Latin-first font for Devanagari - the vertical metrics break and it
-// looks cheap, per the design brief.
-const mukta = Mukta({
-  variable: "--font-mukta",
-  subsets: ["latin", "devanagari"],
+// Noto Sans has no Devanagari coverage, so it's paired with Noto Sans
+// Devanagari and combined into one fallback stack in globals.css - the
+// browser resolves each glyph from whichever font actually covers it.
+const notoSans = Noto_Sans({
+  variable: "--font-noto-sans-latin",
+  subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
-// Display face for the signature "आहे / नाही" moment - heavy weight,
-// condensed width, echoing painted signboard lettering.
-const anekDevanagari = Anek_Devanagari({
-  variable: "--font-anek",
-  subsets: ["latin", "devanagari"],
-  weight: ["700", "800"],
+const notoSansDevanagari = Noto_Sans_Devanagari({
+  variable: "--font-noto-sans-devanagari",
+  subsets: ["devanagari"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -33,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="mr" className={`${mukta.variable} ${anekDevanagari.variable}`}>
+    <html lang="mr" className={`${notoSans.variable} ${notoSansDevanagari.variable}`}>
       <body className="antialiased">{children}</body>
     </html>
   );
